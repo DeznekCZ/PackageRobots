@@ -10,7 +10,6 @@ data:extend(
     mined_sound = {filename = "__core__/sound/deconstruct-medium.ogg"},
     max_health = 50,
     corpse = "small-remnants",
-    dying_explosion = "small-explosion",
     alert_icon_shift = util.by_pixel(0, -13),
     energy_per_hit_point = 1,
     crash_trigger = crash_trigger(),
@@ -39,16 +38,13 @@ data:extend(
       smoke =
       {
         {
-          name = "car-smoke",
-          deviation = {0.25, 0.25},
-          frequency = 400,
-          position = {0, 1.5},
-          starting_frame = 0,
-          starting_frame_deviation = 60
+          name = "smoke",
+          deviation = {0.1, 0.1},
+          frequency = 9
         }
       }
     },
-    consumption = "50kW",
+    consumption = "10kW",
     friction = 1e-3,
     light =
     {
@@ -115,7 +111,6 @@ data:extend(
         }
       }
     },
-    turret_rotation_speed = 0.35 / 60,
     sound_no_fuel =
     {
       {
@@ -160,9 +155,10 @@ data:extend(
     },
     open_sound = { filename = "__base__/sound/car-door-open.ogg", volume=0.7 },
     close_sound = { filename = "__base__/sound/car-door-close.ogg", volume = 0.7 },
-    rotation_speed = 0.5,
+    rotation_speed = 0.01,
     weight = 100,
     guns = { },
-    inventory_size = 5
+    inventory_size = 5,
+    tank_driving = true
   }
 })

@@ -1,6 +1,16 @@
 data:extend(
 {
   {
+    type = "item",
+    name = "void-material",
+    icon = "__base__/graphics/icons/wall-remnants.png",
+    icon_size = 32,
+    flags = {"goes-to-main-inventory"},
+    subgroup = "logistic-network",
+    order = "a[robot]-a[logistic-robot]",
+    stack_size = 200
+  },
+  {
     type = "item-with-entity-data",
     name = "land-robot",
     icon = "__base__/graphics/icons/logistic-robot.png",
