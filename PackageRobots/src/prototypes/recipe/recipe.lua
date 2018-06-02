@@ -39,5 +39,18 @@ data:extend(
     },
     result = "concrete-path-j",
     result_count = 10;
+  },
+  {
+    type = "recipe",
+    name = "concrete-path-c",
+    enabled = true,
+    energy_required = 1,
+    ingredients =
+    {
+      {"concrete", 10},
+      {"copper-cable", 10}
+    },
+    result = "concrete-path-c",
+    result_count = 10;
   }
 })  

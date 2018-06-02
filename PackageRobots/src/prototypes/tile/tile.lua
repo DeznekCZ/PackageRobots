@@ -103,7 +103,7 @@ local function path(mod, type, direction, next_direction)
         volume = 1.0
       }
     },
-    map_color={r=0, g=0.6, b=0.9},
+    map_color=color,
     ageing=0,
     vehicle_friction_modifier = concrete_vehicle_speed_modifier
   }
@@ -111,9 +111,11 @@ end
 
 data:extend(
 {
-  path("PackageRobots", "", "n", "e"),
-  path("PackageRobots", "", "e", "s"),
-  path("PackageRobots", "", "s", "w"),
-  path("PackageRobots", "", "w", "n"),
-  path("PackageRobots", "", "j", "j")
+  path("PackageRobots", "", "n", "e", {r=0, g=0.6, b=0.9}),
+  path("PackageRobots", "", "e", "s", {r=0, g=0.6, b=0.9}),
+  path("PackageRobots", "", "s", "w", {r=0, g=0.6, b=0.9}),
+  path("PackageRobots", "", "w", "n", {r=0, g=0.6, b=0.9}),
+  path("PackageRobots", "", "j", "j", {r=0, g=0.5, b=0.9}),
+  path("PackageRobots", "", "d", "p", {r=0, g=0.6, b=0.8}),
+  path("PackageRobots", "", "p", "d", {r=0, g=0.6, b=0.8})
 })
