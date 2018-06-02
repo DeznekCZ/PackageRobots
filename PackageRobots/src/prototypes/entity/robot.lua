@@ -5,7 +5,7 @@ data:extend(
     name = "land-robot",
     icon = "__base__/graphics/icons/logistic-robot.png",
     icon_size = 32,
-    flags = {"placeable-neutral", "player-creation", "placeable-off-grid"},
+    flags = {"placeable-neutral", "player-creation"},
     minable = {mining_time = 1, result = "land-robot"},
     mined_sound = {filename = "__core__/sound/deconstruct-medium.ogg"},
     max_health = 50,

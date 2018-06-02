@@ -52,5 +52,17 @@ data:extend(
     },
     result = "concrete-path-c",
     result_count = 10;
+  },
+  {
+    type = "recipe",
+    name = "resource-flag",
+    enabled = true,
+    energy_required = 1,
+    ingredients =
+    {
+      {"advanced-circuit", 1}
+    },
+    result = "resource-flag",
+    result_count = 10;
   }
 })  

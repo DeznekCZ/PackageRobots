@@ -1,9 +1,14 @@
 
-local function path(mod, type, direction, next_direction, color)
+local function path(mod, type, direction, next_direction, pickup_direction, color, collision)
   local rtype = ""
+  local rpickup = ""
   
   if type ~= "" then
     rtype = type .. "-"
+  end
+  
+  if pickup_direction ~= "" then
+    rpickup = "-" .. pickup_direction
   end
 
   return {
@@ -12,9 +17,9 @@ local function path(mod, type, direction, next_direction, color)
     needs_correction = false,
     transition_merges_with_tile = "concrete",
     next_direction = rtype .. "concrete-path-" .. next_direction,
-    minable = {hardness = 0.2, mining_time = 0.5, result = rtype .. "concrete-path"},
+    minable = {hardness = 0.2, mining_time = 0.5, result = rtype .. "concrete-path" .. rpickup},
     mined_sound = { filename = "__base__/sound/deconstruct-bricks.ogg" },
-    collision_mask = {"ground-tile"},
+    collision_mask = collision,
     walking_speed_modifier = 1.4,
     layer = 62,
     transition_overlay_layer_offset = 2, -- need to render border overlay on top of hazard-concrete
@@ -111,11 +116,13 @@ end
 
 data:extend(
 {
-  path("PackageRobots", "", "n", "e", {r=0, g=0.6, b=0.9}),
-  path("PackageRobots", "", "e", "s", {r=0, g=0.6, b=0.9}),
-  path("PackageRobots", "", "s", "w", {r=0, g=0.6, b=0.9}),
-  path("PackageRobots", "", "w", "n", {r=0, g=0.6, b=0.9}),
-  path("PackageRobots", "", "j", "j", {r=0, g=0.5, b=0.9}),
-  path("PackageRobots", "", "d", "p", {r=0, g=0.6, b=0.8}),
-  path("PackageRobots", "", "p", "d", {r=0, g=0.6, b=0.8})
+  path("PackageRobots", "", "n", "e", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "e", "s", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "s", "w", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "w", "n", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "j", "x", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "x", "j", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "p", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
+  path("PackageRobots", "", "l", "d", "c", {r=0, g=0.5, b=0.8}, {"ground-tile"})
 })
