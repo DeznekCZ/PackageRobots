@@ -4,7 +4,7 @@ data:extend(
     type = "recipe",
     name = "void-material",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"raw-wood", 1}
@@ -16,7 +16,7 @@ data:extend(
     type = "recipe",
     name = "iron-plate-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
@@ -28,7 +28,7 @@ data:extend(
     type = "recipe",
     name = "advanced-circuit-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
@@ -40,7 +40,7 @@ data:extend(
     type = "recipe",
     name = "engine-unit-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
@@ -52,7 +52,7 @@ data:extend(
     type = "recipe",
     name = "copper-cable-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
@@ -63,7 +63,7 @@ data:extend(
     type = "recipe",
     name = "concrete-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
@@ -72,13 +72,19 @@ data:extend(
   },
   {
     type = "recipe",
-    name = "hazard-concrete-void",
+    name = "stone-brick-void",
     enabled = true,
-    energy_required = 0.1,
+    energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
     },
-    result = "hazard-concrete"
+    result = "stone-brick"
   }
 })
+
+data.raw["recipe"]["hazard-concrete"].enabled = true
+data.raw["recipe"]["fast-inserter"].enabled = true
+data.raw["recipe"]["filter-inserter"].enabled = true
+data.raw["recipe"]["stack-inserter"].enabled = true
+data.raw["recipe"]["stack-filter-inserter"].enabled = true

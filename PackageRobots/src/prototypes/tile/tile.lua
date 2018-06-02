@@ -1,5 +1,5 @@
 
-local function path(mod, type, direction, next_direction)
+local function path(mod, type, direction, next_direction, color)
   local rtype = ""
   
   if type ~= "" then
@@ -16,7 +16,7 @@ local function path(mod, type, direction, next_direction)
     mined_sound = { filename = "__base__/sound/deconstruct-bricks.ogg" },
     collision_mask = {"ground-tile"},
     walking_speed_modifier = 1.4,
-    layer = 61,
+    layer = 62,
     transition_overlay_layer_offset = 2, -- need to render border overlay on top of hazard-concrete
     decorative_removal_probability = 0.25,
     variants =
