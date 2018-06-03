@@ -1,11 +1,6 @@
 
-local function path(mod, type, direction, next_direction, pickup_direction, color, collision)
-  local rtype = ""
+local function concrete_path(mod, direction, next_direction, pickup_direction, color, collision)
   local rpickup = ""
-  
-  if type ~= "" then
-    rtype = type .. "-"
-  end
   
   if pickup_direction ~= "" then
     rpickup = "-" .. pickup_direction
@@ -13,11 +8,11 @@ local function path(mod, type, direction, next_direction, pickup_direction, colo
 
   return {
     type = "tile",
-    name = rtype .. "concrete-path-" .. direction,
+    name = "concrete-path-" .. direction,
     needs_correction = false,
     transition_merges_with_tile = "concrete",
-    next_direction = rtype .. "concrete-path-" .. next_direction,
-    minable = {hardness = 0.2, mining_time = 0.5, result = rtype .. "concrete-path" .. rpickup},
+    next_direction = "concrete-path-" .. next_direction,
+    minable = {hardness = 0.2, mining_time = 0.5, result = "concrete-path" .. rpickup},
     mined_sound = { filename = "__base__/sound/deconstruct-bricks.ogg" },
     collision_mask = collision,
     walking_speed_modifier = 1.4,
@@ -32,19 +27,7 @@ local function path(mod, type, direction, next_direction, pickup_direction, colo
           picture = "__base__/graphics/terrain/concrete/concrete-dummy.png",
           count = 1,
           size = 1
-        },
-        {
-          picture = "__base__/graphics/terrain/concrete/concrete-dummy.png",
-          count = 1,
-          size = 2,
-          probability = 0.39
-        },
-        {
-          picture = "__base__/graphics/terrain/concrete/concrete-dummy.png",
-          count = 1,
-          size = 4,
-          probability = 1
-        },
+        }
       },
       inner_corner_mask =
       {
@@ -78,11 +61,11 @@ local function path(mod, type, direction, next_direction, pickup_direction, colo
 
       material_background =
       {
-        picture = "__" .. mod .. "__/graphics/terrain/concrete/" .. rtype .. "concrete-" .. direction .. ".png",
+        picture = "__" .. mod .. "__/graphics/terrain/concrete/concrete-" .. direction .. ".png",
         count = 8,
         hr_version =
         {
-          picture = "__" .. mod .. "__/graphics/terrain/concrete/hr-" .. rtype .. "concrete-" .. direction .. ".png",
+          picture = "__" .. mod .. "__/graphics/terrain/concrete/hr-concrete-" .. direction .. ".png",
           count = 8,
           scale = 0.5
         }
@@ -116,13 +99,13 @@ end
 
 data:extend(
 {
-  path("PackageRobots", "", "n", "e", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "e", "s", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "s", "w", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "w", "n", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "j", "x", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "x", "j", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "p", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
-  path("PackageRobots", "", "l", "d", "c", {r=0, g=0.5, b=0.8}, {"ground-tile"})
+  concrete_path("PackageRobots", "n", "e", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "e", "s", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "s", "w", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "w", "n", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "j", "x", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "x", "j", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "p", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
+  concrete_path("PackageRobots", "l", "d", "c", {r=0, g=0.5, b=0.8}, {})
 })

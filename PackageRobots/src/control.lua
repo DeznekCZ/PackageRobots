@@ -15,10 +15,41 @@ local check_tables = function()
   if not ll.queues       then ll.queues       = {} end -- queue stack points
 end
 
-local get_net = function(robot)
-  local x = round(robot.entity.position.x)
-  local y = round(robot.entity.position.y)
-  return global.land_logistic.tiles[x][y];
+local function get_tile(fx, fy)
+  local x = math.floor(fx)
+  local y = math.floor(fy)
+  local x_path = global.land_logistic.tiles[x]
+  if x_path then 
+    return x_path[y]
+  else 
+    return nil
+  end
+end
+
+local function set_tile(fx, fy, tile)
+  local x = math.floor(fx)
+  local y = math.floor(fy)
+  local x_path = global.land_logistic.tiles[x]
+  if not x_path then 
+    x_path = {}
+    global.land_logistic.tiles[x] = x_path
+  end
+  
+  if tile and tile.name:gmatch(".*-path-.") then
+    tile_x = {
+      id   = global.land_logistic.tiles.id or 0,
+      x    = tile.x,
+      y    = tile.y,
+      name = tile.name,
+      dir  = string.gsub(tile.name, ".*-path", "path")
+    }
+    game.print(tile_x.dir)
+    
+    x_path[y] = tile_x
+    global.land_logistic.tiles.id = tile_x.id + 1
+  elseif x_path[y] then
+    x_path[y] = nil
+  end
 end
 
 local check_path = function(surface, pickup, drop)
@@ -82,6 +113,8 @@ local search_job = function(robot)
           pickup.server = true
           return
         else
+          if not global.land_logistic.paths[pickup.id] then
+            global.land_logistic.paths[pickup.id] = {} end
           global.land_logistic.paths[pickup.id][drop.id] =
             calculate_path(robor.entity.surface, pickup, drop)
         end
@@ -99,37 +132,53 @@ local on_tick = function(event)
 --  game.print(global.land_logistic.robots.count or 0)
   
   for _, robot in pairs(global.land_logistic.robots) do
-    if robot.net then
+    if robot.tile then
       if robot.state == 0 --[[IDDLE]] then
         search_job(robot)
       else
         move_robot()
       end
     else
-      get_net(robot)
+      robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
     end
   end
 end
 
 local on_built_tile = function(event)
   local tiles = event.tiles
+  for _,tile in pairs(tiles) do
+    set_tile(tile.position.x, tile.position.y, tile)
+  end
 end
 
-local on_mined_tile = function(event)
+local function on_mined_tile(event)
   local tiles = event.tiles
+  for _,tile in pairs(tiles) do
+    set_tile(tile.position.x, tile.position.y, nil)
+  end
 end
 
 local on_built_entity = function(event)
   local entity = event.created_entity
   
-  if entity and entity.name == "land-robot" then
+  if not entity then return end
+  
+  if entity.name == "land-robot" then
     global.land_logistic.robots[entity.unit_number] = {
       id = entity.unit_number,
       state = 0 --[[IDDLE]],
       entity = entity,
-      tile = get_net(entity.position)
+      tile = get_tile(entity.position.x, entity.position.y)
     }
     global.land_logistic.robots.count = (global.land_logistic.robots.count or 0) + 1
+  elseif entity.name == "resource-flag" then
+    local filter = entity.get_filter(1)
+    if filter and string.len(filter) > 0 then
+      -- game.print({"item-name." .. filter})
+      if get_tile(entity.position.x, entity.position.y) then
+        game.print("added") -- TODO
+      end
+    end
   end
 end
 
@@ -145,7 +194,8 @@ end
 script.on_init(init)
 script.on_load(init)
 script.on_event(defines.events.on_tick, on_tick)
-script.on_event(defines.events.on_player_built_tile, on_built_tile)
-script.on_event(defines.events.on_player_mined_tile, on_mined_tile)
-script.on_event(defines.events.on_built_entity, on_built_entity)
-script.on_event(defines.events.on_player_mined_entity, on_mined_entity)
+script.on_event({defines.events.on_player_built_tile,   defines.events.on_robot_built_tile  }, on_built_tile)
+script.on_event({defines.events.on_player_mined_tile,   defines.events.on_robot_mined_entity}, on_mined_tile)
+script.on_event({defines.events.on_built_entity,        defines.events.on_robot_built_entity}, on_built_entity)
+script.on_event({defines.events.on_player_mined_entity, defines.events.on_robot_mined_tile  }, on_mined_entity)
+

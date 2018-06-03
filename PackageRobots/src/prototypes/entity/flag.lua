@@ -10,7 +10,7 @@ data:extend(
     max_health = 150,
     corpse = "small-remnants",
     filter_count = 1,
-    collision_mask = {"item-layer", "object-layer", "player-layer", "water-tile", "layer-15"},
+    collision_mask = {"item-layer", "object-layer", "player-layer", "water-tile", "ground-tile", "layer-15"},
     resistances =
     {
       {
