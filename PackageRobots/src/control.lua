@@ -26,6 +26,20 @@ local function get_tile(fx, fy)
   end
 end
 
+local function init_tile(tile_x)
+  local dir = tile_x.dir
+  
+  tile_x.platform = (dir == "path-d") or (dir == "path-p") or (dir == "path-l")
+  tile_x.drop = platform and (dir == "path-d")
+  tile_x.pickup = platform and (dir == "path-p")
+  tile_x.flag = platform and (dir == "path-l")
+  tile_x.junction = (not platform) and dir == "path-j"
+  tile_x.cross = (not platform) and dir == "path-x"
+  tile_x.path = (not platform) and (not junction) and (not cross) 
+  
+  game.print{"pp-path.type", tile_x.platform, tile_x.drop, tile_x.pickup, tile_x.flag, tile_x.junction, tile_x.path}
+end
+
 local function set_tile(fx, fy, tile)
   local x = math.floor(fx)
   local y = math.floor(fy)
@@ -38,12 +52,13 @@ local function set_tile(fx, fy, tile)
   if tile and tile.name:gmatch(".*-path-.") then
     tile_x = {
       id   = global.land_logistic.tiles.id or 0,
-      x    = tile.x,
-      y    = tile.y,
+      x    = x,
+      y    = y,
       name = tile.name,
       dir  = string.gsub(tile.name, ".*-path", "path")
     }
-    game.print(tile_x.dir)
+    
+    init_tile(tile_x)
     
     x_path[y] = tile_x
     global.land_logistic.tiles.id = tile_x.id + 1
@@ -145,9 +160,10 @@ local on_tick = function(event)
 end
 
 local on_built_tile = function(event)
+  local surface = game.surfaces[event.surface_index]
   local tiles = event.tiles
   for _,tile in pairs(tiles) do
-    set_tile(tile.position.x, tile.position.y, tile)
+    set_tile(tile.position.x, tile.position.y, surface.get_tile(tile.position.x, tile.position.y))
   end
 end
 
