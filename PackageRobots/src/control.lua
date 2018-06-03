@@ -10,19 +10,37 @@ local check_tables = function()
   if not ll.pickups      then ll.pickups      = {} end -- load positions
   if not ll.platforms    then ll.platforms    = {} end -- platforms
   if not ll.flags        then ll.flags        = {} end -- list of flags
+  if not ll.resting      then ll.resting      = {} end -- list of resting points
   if not ll.tiles        then ll.tiles        = {} end -- all direction tiles
 --PATH DATA
   if not ll.paths        then ll.paths        = {} end -- pre-calculated paths
+  if not ll.paths_w      then ll.paths_w      = {} end -- pre-calculated paths
 --ROBOTS DATA
   if not ll.robots       then ll.robots       = {} end -- list of robots
+end
+
+local function reset_path_calculation()
+  ll.paths_w = {}
+end
+
+local function position(data)
+  if data and data.x and data.y then
+    return { x = data.x, y = data.y }
+  else
+    return nil
+  end
 end
 
 local function is_path(tile)
   if tile and tile.name:gmatch(".*-path-.") then return tile else return nil end
 end
 
-local function is_platform(tile_x)
+local function get_platform(tile_x)
   if tile_x and tile_x.platform then return tile_x else return nil end
+end
+
+local function get_platform_by_id(id)
+  return global.land_logistic.platforms[id]
 end
 
 local function get_tile_round(x, y)
@@ -32,6 +50,10 @@ local function get_tile_round(x, y)
   else 
     return nil
   end
+end
+
+local function calculate_rest_points(platform)
+  
 end
 
 local function get_tile(fx, fy)
@@ -48,10 +70,10 @@ local function detach_platform(tile_x, platform)
 end
 
 local function attach_platform(from, to)
-  local platform = global.land_logistic.platforms[to.id]
+  local platform = global.land_logistic.platforms[to.platform_id]
   
   if from.platform_id ~= to.platform_id then
-    local from_platform = global.land_logistic.platforms[from.id]
+    local from_platform = global.land_logistic.platforms[from.platform_id]
     global.land_logistic.platforms[from.id] = nil -- remove last platform
     
     for _,tile_loc in pairs(from_platform.tiles) do
@@ -70,7 +92,7 @@ local function connect_platform(platform_tile, new_tile)
   elseif platform_tile then
     new_tile.platform_id = platform_tile.platform_id
     local platform = global.land_logistic.platforms[new_tile.platform_id]
-    platform.tiles[new_tile.id] = { x = tile_loc.x, y = tile_loc.y, dir = tile_loc.dir }
+    platform.tiles[new_tile.id] = { x = new_tile.x, y = new_tile.y, dir = new_tile.dir }
   end
 end
 
@@ -101,18 +123,20 @@ local function init_tile(tile_x)
     tile_x.platform_id = -1
     
     --PLATFORM exists
-    connect_platform(is_platform(tn), tile_x)
-    connect_platform(is_platform(te), tile_x)
-    connect_platform(is_platform(ts), tile_x)
-    connect_platform(is_platform(tw), tile_x)
+    connect_platform(get_platform(tn), tile_x)
+    connect_platform(get_platform(te), tile_x)
+    connect_platform(get_platform(ts), tile_x)
+    connect_platform(get_platform(tw), tile_x)
     if tile_x.platform_id == -1 then
       tile_x.platform_id = tile_x.id
       platform = {
         id = tile_x.platform_id,
         tiles = {
           [tile_x.id] = { x = tile_x.x, y = tile_x.y, dir = tile_x.dir }
-        }
+        },
+        resting = {}
       }
+      calculate_rest_points(platform)
       global.land_logistic.platforms[tile_x.platform_id] = platform
     end
   end
@@ -137,6 +161,11 @@ local function init_tile(tile_x)
     return true
   elseif tile_x.path then    
     
+    return true
+  elseif tile_x.resting then    
+    for _, platform in pairs(global.land_logistic.platforms)
+      calculate_rest_points(platform)
+    end
     return true
   else
     return false
@@ -170,7 +199,7 @@ local function set_tile(fx, fy, tile)
   elseif x_path[y] then
     local tile_x = x_path[y]
     x_path[y] = nil
-    if is_platform(tile_x) then
+    if get_platform(tile_x) then
       detach_platform(tile_x, global.land_logistic.platforms[tile_x.platform_id])
     end
   end
@@ -182,12 +211,15 @@ local function get_path(start_pos, end_pos)
   local starts = global.land_logistic.paths[start_tile.id]
   if not starts then return nil end
   local path = starts[end_tile.id]
-  if not path then return nil end
   return path
 end
 
 local function check_path(surface, start_pos, end_pos)
   local path = get_path(start_pos, end_pos)
+  if not path then
+    return false
+  end
+  
   for _,tile_entry in pairs(path) do
     local tile = surface.get_tile(tile_entry.x, tile_entry.y)
     if not tile.name:gmatch(".*" .. tile_entry.dir) then 
@@ -198,13 +230,24 @@ local function check_path(surface, start_pos, end_pos)
 end
 
 local calculate_path = function(surface, from, to)
+  
+  if (not surface) or (not from) or (not to) then
+    return nil
+  end
+  
+  w_path_id = from.x .. "_" .. from.y .. "-" .. to.x .. "_" .. to.y
+  
+  if global.land_logistic.paths_w[w_path_id] then
+    return nil
+  end
+  
   local path = nil
   local QUEUE = {}
   local qstart = 0
   local qend = 0
   
-  pickup.CALC = 0
-  pickup.PREV = -1
+  from.CALC = 0
+  from.PREV = -1
   --PATH CALCULATOR
   QUEUE[start] = from
   while QUEUE[start] do
@@ -220,7 +263,12 @@ local calculate_path = function(surface, from, to)
     
   end
   
-  return path
+  if path then
+    return path
+  else
+    global.land_logistic.paths_w[w_path_id] = 1
+    return nil
+  end
 end
 
 local search_job = function(robot) 
@@ -228,7 +276,7 @@ local search_job = function(robot)
   local found_drop = false
   for _,drop in pairs(global.land_logistic.drops) do
     if drop.served then goto next_drop end
-    local drop_p = get_platform(drop.platform_id)
+    local drop_p = get_platform_by_id(drop.platform_id)
     if (not drop_p) and (not drop_p.res) then goto next_drop end
     -- SEARCHING FOR PICKUP
     for _,pickup_p in pairs(global.land_logistic.platforms) do
@@ -237,24 +285,32 @@ local search_job = function(robot)
         for _,pickup_pos in pairs(pickup_p.tiles) do
           if pickup_pos.dir == "path-p" then
             next_point = get_tile_round(pickup_pos.x, pickup_pos.y)
-            if free_pickup.served then goto next_pickup end
-            goto pickup_found
+            if (not next_point.served) 
+            and check_path(robor.entity.surface, position(next_point), position(drop)) then 
+              goto point_found
+            end
           end
-          ::next_pickup::
         end
         for _,rest_pos in pairs(pickup_p.resting) do
           next_point = get_tile_round(rest_pos.x, rest_pos.y)
-          if not free_pickup.served then goto point_found end
+          if (not next_point.served) 
+          and check_path(robor.entity.surface, position(next_point), position(drop)) then
+            goto point_found
+          else
+            calculate_path(robor.entity.surface, position(next_point), position(drop))
+          end
         end
         goto next_drop
         ::point_found::
-        if check_path(robor.entity.surface, position(next_point), position(drop)) then
-          robot.path = calculate_path(robor.entity.surface, position(robot.tile), position(next_point))
-          robot.state = 1 --[[RUN_FICKUP]]
+        robot.path = calculate_path(robor.entity.surface, position(robot.tile), position(next_point))
+        if robot_path then
+          robot.destination = position(next_point)
+          robot.state = 1 --[[RUN]]
           drop.served = true
+          next_point.served = true
           return
         else
-          calculate_path(robor.entity.surface, position(pickup), position(drop))
+          calculate_path(robor.entity.surface, position(next_point), position(drop))
         end
       end
     end
@@ -268,6 +324,7 @@ end
 
 local on_tick = function(event)
   check_tables()
+  reset_path_calculation()
 --  game.print(global.land_logistic.robots.count or 0)
   
   for _, robot in pairs(global.land_logistic.robots) do
@@ -286,6 +343,7 @@ local on_tick = function(event)
 end
 
 local on_built_tile = function(event)
+  check_tables()
   local surface = game.surfaces[event.surface_index]
   local tiles = event.tiles
   for _,tile in pairs(tiles) do
@@ -294,6 +352,7 @@ local on_built_tile = function(event)
 end
 
 local function on_mined_tile(event)
+  check_tables()
   local tiles = event.tiles
   for _,tile in pairs(tiles) do
     set_tile(tile.position.x, tile.position.y, nil)
@@ -301,6 +360,7 @@ local function on_mined_tile(event)
 end
 
 local on_built_entity = function(event)
+  check_tables()
   local entity = event.created_entity
   
   if not entity then return end
@@ -324,6 +384,7 @@ local on_built_entity = function(event)
 end
 
 local on_mined_entity = function(event)
+  check_tables()
   local entity = event.entity
   
   if entity and entity.name == "land-robot" then
