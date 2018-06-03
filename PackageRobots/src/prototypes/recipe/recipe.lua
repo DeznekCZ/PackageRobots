@@ -36,7 +36,7 @@ data:extend(
     {
       {"concrete", 10},
       {"copper-cable", 10},
-      {"logic-circuit", 10}
+      {"electronic-circuit", 10}
     },
     result = "concrete-path-j",
     result_count = 10;
@@ -50,7 +50,7 @@ data:extend(
     {
       {"concrete", 10},
       {"copper-cable", 10},
-      {"logic-circuit", 20}
+      {"electronic-circuit", 20}
     },
     result = "concrete-path-c",
     result_count = 10;

@@ -1,6 +1,16 @@
 data:extend(
 {
   {
+    type = "item",
+    name = "void-material",
+    icon = "__base__/graphics/icons/wall-remnants.png",
+    icon_size = 32,
+    flags = {"goes-to-main-inventory"},
+    subgroup = "logistic-network",
+    order = "a[robot]-a[logistic-robot]",
+    stack_size = 1000
+  },
+  {
     type = "recipe",
     name = "void-material",
     enabled = true,
@@ -10,7 +20,7 @@ data:extend(
       {"raw-wood", 1}
     },
     result = "void-material",
-    result_count = 100
+    result_count = 1000
   },
   {
     type = "recipe",
@@ -50,6 +60,17 @@ data:extend(
   },
   {
     type = "recipe",
+    name = "copper-cable-void",
+    enabled = true,
+    energy_required = 0.01,
+    ingredients =
+    {
+      {"void-material", 1}
+    },
+    result = "copper-cable"
+  },
+  {
+    type = "recipe",
     name = "copper-plate-void",
     enabled = true,
     energy_required = 0.01,
@@ -80,6 +101,17 @@ data:extend(
       {"void-material", 1}
     },
     result = "stone-brick"
+  },
+  {
+    type = "recipe",
+    name = "electronic-circuit-void",
+    enabled = true,
+    energy_required = 0.01,
+    ingredients =
+    {
+      {"void-material", 1}
+    },
+    result = "electronic-circuit"
   }
 })
 

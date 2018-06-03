@@ -17,13 +17,15 @@ local check_tables = function()
   if not ll.robots       then ll.robots       = {} end -- list of robots
 end
 
+local function is_path(tile)
+  if tile and tile.name:gmatch(".*-path-.") then return tile else return nil end
+end
+
 local function is_platform(tile_x)
   if tile_x and tile_x.platform then return tile_x else return nil end
 end
 
-local function get_tile(fx, fy)
-  local x = math.floor(fx)
-  local y = math.floor(fy)
+local function get_tile_round(x, y)
   local x_path = global.land_logistic.tiles[x]
   if x_path then 
     return x_path[y]
@@ -32,6 +34,11 @@ local function get_tile(fx, fy)
   end
 end
 
+local function get_tile(fx, fy)
+  local x = math.floor(fx)
+  local y = math.floor(fy)
+  return get_tile_round(x, y)
+end
 
 local function detach_platform(tile_x, platform)
   platform.tiles[tile_x.id] = nil
@@ -47,8 +54,9 @@ local function attach_platform(from, to)
     local from_platform = global.land_logistic.platforms[from.id]
     global.land_logistic.platforms[from.id] = nil -- remove last platform
     
-    for _,tile in pairs(from_platform.tiles) do
-      platform.tiles[tile.id] = tile
+    for _,tile_loc in pairs(from_platform.tiles) do
+      local tile = global.land_logistic.tiles[tile_loc.x][tile_loc.y]
+      platform.tiles[tile.id] = { x = tile_loc.x, y = tile_loc.y, dir = tile_loc.dir }
       tile.platform_id = platform.id
     end
   end
@@ -62,7 +70,7 @@ local function connect_platform(platform_tile, new_tile)
   elseif platform_tile then
     new_tile.platform_id = platform_tile.platform_id
     local platform = global.land_logistic.platforms[new_tile.platform_id]
-    platform.tiles[new_tile.id] = global.land_logistic.tiles[new_tile.x][new_tile.y]
+    platform.tiles[new_tile.id] = { x = tile_loc.x, y = tile_loc.y, dir = tile_loc.dir }
   end
 end
 
@@ -102,7 +110,7 @@ local function init_tile(tile_x)
       platform = {
         id = tile_x.platform_id,
         tiles = {
-          [tile_x.id] = tile_x
+          [tile_x.id] = { x = tile_x.x, y = tile_x.y, dir = tile_x.dir }
         }
       }
       global.land_logistic.platforms[tile_x.platform_id] = platform
@@ -144,7 +152,7 @@ local function set_tile(fx, fy, tile)
     x_path = global.land_logistic.tiles[x]
   end
   
-  if tile and tile.name:gmatch(".*-path-.") then
+  if tile and is_path(tile) then
     local tile_x = {
       id   = global.land_logistic.tile_id or 0,
       x    = x,
@@ -168,23 +176,28 @@ local function set_tile(fx, fy, tile)
   end
 end
 
-local check_path = function(surface, pickup, drop)
-  local path = global.land_logistic.paths[pickup.id][drop.id]
-  if path then
-    for _,tile_entry in pairs(path) do
-      local tile = surface.get_tile(tile_entry.x, tile_entry.y)
-      if not string.find(tile.name, tile_entry.dir) then 
-        return false
-      end
-    end
-    return true
-  else
-    return false
-  end
+local function get_path(start_pos, end_pos)
+  local start_tile = get_tile_round(start_pos.x, start_pos.y)
+  local end_tile = get_tile_round(end_pos.x, end_pos.y)
+  local starts = global.land_logistic.paths[start_tile.id]
+  if not starts then return nil end
+  local path = starts[end_tile.id]
+  if not path then return nil end
+  return path
 end
 
---[[ to= ]]
-local calculate_path_limited = function(surface, from, to, limit)
+local function check_path(surface, start_pos, end_pos)
+  local path = get_path(start_pos, end_pos)
+  for _,tile_entry in pairs(path) do
+    local tile = surface.get_tile(tile_entry.x, tile_entry.y)
+    if not tile.name:gmatch(".*" .. tile_entry.dir) then 
+      return false
+    end
+  end
+  return true
+end
+
+local calculate_path = function(surface, from, to)
   local path = nil
   local QUEUE = {}
   local qstart = 0
@@ -210,32 +223,42 @@ local calculate_path_limited = function(surface, from, to, limit)
   return path
 end
 
-local calculate_path = function(surface, from, to)
-  return calculate_path_limited(surface, from, to, -1)
-end
-
 local search_job = function(robot) 
   -- SEARCHING FOR DROP
   local found_drop = false
   for _,drop in pairs(global.land_logistic.drops) do
+    if drop.served then goto next_drop end
+    local drop_p = get_platform(drop.platform_id)
+    if (not drop_p) and (not drop_p.res) then goto next_drop end
     -- SEARCHING FOR PICKUP
-    local found_pickup = false
-    for _,pickup in pairs(global.land_logistic.pickups) do
-      if drop.res == pickup.res then
-        if check_path(robor.entity.surface, pickup, drop) then
-          robot.path = calculate_path(robor.entity.surface, robot.tile, drop)
+    for _,pickup_p in pairs(global.land_logistic.platforms) do
+      if drop_p.res == pickup_p.res then
+        local next_point
+        for _,pickup_pos in pairs(pickup_p.tiles) do
+          if pickup_pos.dir == "path-p" then
+            next_point = get_tile_round(pickup_pos.x, pickup_pos.y)
+            if free_pickup.served then goto next_pickup end
+            goto pickup_found
+          end
+          ::next_pickup::
+        end
+        for _,rest_pos in pairs(pickup_p.resting) do
+          next_point = get_tile_round(rest_pos.x, rest_pos.y)
+          if not free_pickup.served then goto point_found end
+        end
+        goto next_drop
+        ::point_found::
+        if check_path(robor.entity.surface, position(next_point), position(drop)) then
+          robot.path = calculate_path(robor.entity.surface, position(robot.tile), position(next_point))
           robot.state = 1 --[[RUN_FICKUP]]
           drop.served = true
-          pickup.server = true
           return
         else
-          if not global.land_logistic.paths[pickup.id] then
-            global.land_logistic.paths[pickup.id] = {} end
-          global.land_logistic.paths[pickup.id][drop.id] =
-            calculate_path(robor.entity.surface, pickup, drop)
+          calculate_path(robor.entity.surface, position(pickup), position(drop))
         end
       end
     end
+    ::next_drop::
   end
 end
 
@@ -248,14 +271,16 @@ local on_tick = function(event)
 --  game.print(global.land_logistic.robots.count or 0)
   
   for _, robot in pairs(global.land_logistic.robots) do
+    robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
     if robot.tile then
+      game.print{"", robot.tile.name}
       if robot.state == 0 --[[IDDLE]] then
         search_job(robot)
       else
         move_robot()
       end
     else
-      robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
+      game.print{"", "off-grid"}
     end
   end
 end
