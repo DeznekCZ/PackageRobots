@@ -241,15 +241,16 @@ local calculate_path = function(surface, from, to)
     return nil
   end
   
+  local function QID(value) return value.x .. "_" .. value.y end
+  local function QENTRY(x,y) return { id = QID({x = x, y = y}), x = value.x, y = value.y, parent = nil } end
   local path = nil
   local QUEUE = {}
   local qstart = 0
   local qend = 0
   
-  from.CALC = 0
-  from.PREV = -1
   --PATH CALCULATOR
-  QUEUE[start] = from
+  local QUEUE[start] = QENTRY(from.x, from.y)
+  local VISITED[QID(from)] = QUEUE[start]  
   while QUEUE[start] do
     --POP START
     local cur = QUEUE[start]
@@ -261,6 +262,10 @@ local calculate_path = function(surface, from, to)
     local x = cur.x
     local y = cur.y
     
+    local tile_x = get_tile(x, y)
+    if tile_x.path then
+      
+    end
   end
   
   if path then
