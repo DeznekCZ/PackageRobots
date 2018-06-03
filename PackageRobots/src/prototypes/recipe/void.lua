@@ -50,14 +50,14 @@ data:extend(
   },
   {
     type = "recipe",
-    name = "copper-cable-void",
+    name = "copper-plate-void",
     enabled = true,
     energy_required = 0.01,
     ingredients =
     {
       {"void-material", 1}
     },
-    result = "copper-cable"
+    result = "copper-plate"
   },
   {
     type = "recipe",

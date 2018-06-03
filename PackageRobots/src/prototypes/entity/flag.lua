@@ -26,10 +26,10 @@ data:extend(
     {
       type = "electric",
       usage_priority = "secondary-input",
-      drain = "0kW"
+      drain = "0.4kW"
     },
-    extension_speed = 0.00,
-    rotation_speed = 0.00,
+    extension_speed = 0.03,
+    rotation_speed = 0.014,
     vehicle_impact_sound =  { filename = "__base__/sound/car-metal-impact.ogg", volume = 0.65 },
     working_sound =
     {
@@ -60,12 +60,12 @@ data:extend(
     },
     hand_base_picture =
     {
-      filename = "__base__/graphics/entity/inserter/inserter-hand-base.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 8,
       height = 33,
       hr_version = {
-        filename = "__base__/graphics/entity/inserter/hr-inserter-hand-base.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 32,
         height = 136,
@@ -74,12 +74,12 @@ data:extend(
     },
     hand_closed_picture =
     {
-      filename = "__base__/graphics/entity/inserter/inserter-hand-closed.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 18,
       height = 41,
       hr_version = {
-        filename = "__base__/graphics/entity/inserter/hr-inserter-hand-closed.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 72,
         height = 164,
@@ -88,12 +88,12 @@ data:extend(
     },
     hand_open_picture =
     {
-      filename = "__base__/graphics/entity/inserter/inserter-hand-open.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 18,
       height = 41,
       hr_version = {
-        filename = "__base__/graphics/entity/inserter/hr-inserter-hand-open.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 72,
         height = 164,
@@ -102,12 +102,12 @@ data:extend(
     },
     hand_base_shadow =
     {
-      filename = "__base__/graphics/entity/burner-inserter/burner-inserter-hand-base-shadow.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 8,
       height = 33,
       hr_version = {
-        filename = "__base__/graphics/entity/burner-inserter/hr-burner-inserter-hand-base-shadow.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 32,
         height = 132,
@@ -116,12 +116,12 @@ data:extend(
     },
     hand_closed_shadow =
     {
-      filename = "__base__/graphics/entity/burner-inserter/burner-inserter-hand-closed-shadow.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 18,
       height = 41,
       hr_version = {
-        filename = "__base__/graphics/entity/burner-inserter/hr-burner-inserter-hand-closed-shadow.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 72,
         height = 164,
@@ -130,20 +130,20 @@ data:extend(
     },
     hand_open_shadow =
     {
-      filename = "__base__/graphics/entity/burner-inserter/burner-inserter-hand-open-shadow.png",
+      filename = "__PackageRobots__/graphics/dummy.png",
       priority = "extra-high",
       width = 18,
       height = 41,
       hr_version = {
-        filename = "__base__/graphics/entity/burner-inserter/hr-burner-inserter-hand-open-shadow.png",
+        filename = "__PackageRobots__/graphics/dummy.png",
         priority = "extra-high",
         width = 72,
         height = 164,
         scale = 0.25
       }
     },
-    pickup_position = {0, 0},
-    insert_position = {0, 0},
+    pickup_position = {0, 0.1},
+    insert_position = {0, -0.1},
     platform_picture =
     {
       sheet =

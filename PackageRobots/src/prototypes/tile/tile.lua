@@ -31,7 +31,7 @@ local function concrete_path(mod, direction, next_direction, pickup_direction, c
       },
       inner_corner_mask =
       {
-        picture = "__base__/graphics/terrain/concrete/hazard-concrete-inner-corner-mask.png",
+        picture = "__base__/graphics/terrain/concrete/concrete-dummy.png",
         count = 1
       },
       outer_corner_mask =
