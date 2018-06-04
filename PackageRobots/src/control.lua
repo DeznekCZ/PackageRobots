@@ -303,7 +303,7 @@ local function search_job(robot)
       robot.entity.surface.create_entity{
         name = "flying-text", 
         position = robot.entity.position, 
-        text = {"land_logistic.state-resource", {"item-name." .. drop_p.res} or {"entity-name." .. drop_p.res}}
+        text = {"land_logistic.state-resource", game.item_prototypes[drop_p.res].localised_name}
       }
       robot.destination = position(next_point)
       robot.state = 1 --[[RUN]]
