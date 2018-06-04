@@ -29,7 +29,7 @@ data:extend(
   },
   {
     type = "recipe",
-    name = "concrete-path-j",
+    name = "concrete-path-i",
     enabled = true,
     energy_required = 1,
     ingredients =
@@ -38,7 +38,7 @@ data:extend(
       {"copper-cable", 10},
       {"electronic-circuit", 10}
     },
-    result = "concrete-path-j",
+    result = "concrete-path-i",
     result_count = 10;
   },
   {

@@ -99,13 +99,13 @@ end
 
 data:extend(
 {
-  concrete_path("PackageRobots", "n", "e", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "e", "s", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "s", "w", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "w", "n", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "j", "x", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "x", "j", "j", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "p", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15"}),
-  concrete_path("PackageRobots", "l", "d", "c", {r=0, g=0.5, b=0.8}, {})
+  concrete_path("PackageRobots", "n", "e", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "e", "s", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "s", "w", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "w", "n", "",  {r=0, g=0.6, b=0.9}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "j", "x", "i", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "x", "j", "i", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "p", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-15", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "l", "d", "c", {r=0, g=0.5, b=0.8}, {"item-layer", "object-layer"})
 })

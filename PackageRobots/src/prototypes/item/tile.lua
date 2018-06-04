@@ -18,8 +18,8 @@ data:extend(
   },
   {
     type = "item",
-    name = "concrete-path-j",
-    icon = "__PackageRobots__/graphics/icons/concrete-path-j.png",
+    name = "concrete-path-i",
+    icon = "__PackageRobots__/graphics/icons/concrete-path-i.png",
     icon_size = 32,
     flags = {"goes-to-quickbar"},
     subgroup = "logistic-network",
