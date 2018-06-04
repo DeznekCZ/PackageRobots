@@ -65,6 +65,6 @@ data:extend(
       {"advanced-circuit", 1}
     },
     result = "resource-flag",
-    result_count = 10;
+    result_count = 1;
   }
 })  
