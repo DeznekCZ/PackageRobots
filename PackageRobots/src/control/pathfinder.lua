@@ -50,11 +50,13 @@ function MyClass:get_value()
 end]]
 
 function PathFinder.DEBUG(self, tile_x)
+--[[] -- give here a bracket for see debug mode
   game.players[1].character.surface.create_entity{
         name = "wooden-chest", 
         position = tile_x,
         force = game.players[1].force
       }
+--[[]]
 end
 
 function PathFinder.QID(self, value)
@@ -65,6 +67,15 @@ function PathFinder.TILE(self, x, y)
   local x_path = self.data.tiles[x]
   if x_path then 
     return x_path[y]
+  else 
+    return nil
+  end
+end
+
+function PathFinder.TILE_P(self, position)
+  local x_path = self.data.tiles[position.x]
+  if x_path then 
+    return x_path[position.y]
   else 
     return nil
   end
@@ -85,13 +96,30 @@ function PathFinder:register(surface, from, to)
   end
 
   local w_path_id = from.x .. "_" .. from.y .. "-" .. to.x .. "_" .. to.y
+  local do_calculation = false
   
   local reg = self.registration[w_path_id]
   if reg and reg.calculated then
-    return reg.path
+    path = reg.path
   elseif reg then
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] is in queue")
   else
+    do_calculation = true
+  end
+  
+  if path then
+    --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
+    for _,tile_entry in pairs(path) do
+      local tile = surface.get_tile(tile_entry.x, tile_entry.y)
+      if not tile.name:gmatch(".*" .. tile_entry.dir) then 
+        path = nil
+        do_calculation = true
+        break
+      end
+    end
+  end
+  
+  if do_calculation then
     reg = {
       calculated = false,
       surface = surface,
@@ -103,7 +131,8 @@ function PathFinder:register(surface, from, to)
     self.queue:push(reg)
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] registered")
   end
-  return nil
+  
+  return path
 end
 
 function PathFinder.ENQUEUE(self, cur, queue, visited, x, y)
@@ -116,14 +145,12 @@ function PathFinder.ENQUEUE(self, cur, queue, visited, x, y)
       local cross_tile = PathFinder.TILE(self, cross_idx * (x - cur.x) + cur.x, cross_idx * (y - cur.y) + cur.y)
       local cross_path = Queue.new(NT)
       while cross_tile and cross_tile.cross do
-        --PathFinder.log_actions(self, "cross " .. serpent.block(cross_tile))
         PathFinder.DEBUG(self, cross_tile)
         cross_path:push(cross_tile)
         cross_idx = cross_idx + 1
         cross_tile = PathFinder.TILE(self, cross_idx * (x - cur.x) + cur.x, cross_idx * (y - cur.y) + cur.y)
       end
       if cross_tile then
-        --PathFinder.log_actions(self, "after" .. serpent.block(self, cross_tile))
         local vqid = PathFinder.QID(self, cross_tile)
         if not visited[vqid] then 
           visited[vqid] = { source = cur, source_id = PathFinder.QID(self, cur), crossed = cross_path }
@@ -303,9 +330,7 @@ function PathFinder.COPY_PATH(self, reg)
     path[diversion - i] = v
   end
   reg.path = path
-  PathFinder.set_path(self, reg.from, reg.to, path)
-  
-  reg.calculated = true
+  PathFinder.set_path(self, self:TILE_P(reg.from), self:TILE_P(reg.to), path)
 end
 
 function PathFinder:tick()
@@ -335,7 +360,6 @@ function PathFinder:tick()
     last.fqid = nil
     last.eqid = nil
     last.path_found = nil
-    self.registration[last.id] = nil
     last.calculated = true
   -- QUEUE IS EMPTY
   elseif last.queue:is_empty() then
@@ -349,7 +373,7 @@ function PathFinder:tick()
   -- STEP SESSION
   else                    
     last.path_found = PathFinder.STEP(self, 
-      1, -- COUNT GIVEN LATER BY CONFIG
+      5, -- COUNT GIVEN LATER BY CONFIG
       last.queue,
       last.visited,
       last.fqid,

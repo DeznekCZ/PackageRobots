@@ -251,23 +251,7 @@ local function set_path(start_pos, end_pos, path)
 end
 
 local function check_path(surface, start_pos, end_pos)
-  --log_actions("getting path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-  local path = get_path(start_pos, end_pos)
-  if path then
-    --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    for _,tile_entry in pairs(path) do
-      local tile = surface.get_tile(tile_entry.x, tile_entry.y)
-      if not tile.name:gmatch(".*" .. tile_entry.dir) then 
-        path = nil
-        break
-      end
-    end
-  end
-  if not path then
-    --log_actions("calculating path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    path = global.land_logistic.PATH_FINDER:register(surface, start_pos, end_pos)
-  end
-  return path
+  return global.land_logistic.PATH_FINDER:register(surface, start_pos, end_pos)
 end
 
 local function search_job(robot) 
@@ -338,9 +322,9 @@ end
 local on_tick = function(event)
   check_tables()
 --  log_actions(serpent.block(global.land_logistic.PATH_FINDER))
-  if (event.tick % 10) == 0 then
-    global.land_logistic.PATH_FINDER:tick()
-  end
+--if (event.tick % 10) == 0 then
+  global.land_logistic.PATH_FINDER:tick()
+--end
 --  game.print(global.land_logistic.robots.count or 0)
  
   for _, flag in pairs(global.land_logistic.filters) do

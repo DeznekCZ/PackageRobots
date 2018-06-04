@@ -19,7 +19,7 @@ end
 function Queue:push(data)
   if self.first then
     local ptr = self.first
-    while self.first.next do ptr = ptr.next end
+    while ptr.next do ptr = ptr.next end
     ptr.next = { data = data }
   else
     self.first = { data = data }
