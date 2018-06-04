@@ -1,3 +1,21 @@
+--[[
+  PackageRobots - control.lua
+  
+  Author: Zdenek Novotny (DeznekCZ)
+]]
+require("control.pathfinder")
+
+local function reset_log() 
+  game.write_file("land_logistic.log", "", false)
+end
+
+local function log_actions(text) 
+  game.write_file("land_logistic.log", text .. "\n", true)
+end
+
+local function export_data() 
+  game.write_file("land_logistic.lua", serpent.block(global.land_logistic) .. "\n", false)
+end
 
 local init = function()
   if not global.land_logistic then global.land_logistic = {} end
@@ -18,14 +36,8 @@ local check_tables = function()
   if not ll.paths_w      then ll.paths_w      = {} end -- pre-calculated paths
 --ROBOTS DATA
   if not ll.robots       then ll.robots       = {} end -- list of robots
-end
-
-local function log_actions(text) 
-  game.write_file("land_logistic.log", text .. "\n", true)
-end
-
-local function export_data() 
-  game.write_file("land_logistic.lua", serpent.block(global.land_logistic) .. "\n", false)
+  
+  if not ll.PATH_FINDER  then ll.PATH_FINDER  = PathFinder.new(ll) end
 end
 
 local function reset_path_calculation()
@@ -50,6 +62,10 @@ end
 
 local function get_platform_by_id(id)
   return global.land_logistic.platforms[id]
+end
+
+local function get_robot(robot_id)
+  if robot_id then return global.land_logistic.robots[robot_id] end
 end
 
 local function get_tile_round(x, y)
@@ -234,183 +250,11 @@ local function set_path(start_pos, end_pos, path)
   end
 end
 
-local function QID(value) return value.x .. "_" .. value.y end
-
-local function QENTRY(x,y) return { id = QID({x = x, y = y}), x = value.x, y = value.y, parent = nil } end
-
-local function ENQUEUE(queue, visited, last, tile_x, x, y)
-  queue[last] = get_tile(x, y)
-  local qlast = queue[last]
-  if qlast then
-    if qlast.cross then -- SKIP cross
-      local clast = get_tile(2 * x - tile.x, 2 * y - tile.y) -- tile.x + (x - tile.x) * 2 = 2 * x - tile.x
-      local vqid = QID(clast)
-      if not visited[vqid] then 
-        visited[vqid] = { source = tile_x, source_id = QID(tile_x), crossed = qlast }
-        return last + 1
-      end
-    else
-      local vqid = QID(qlast)
-      if not visited[vqid] then 
-        visited[vqid] = { source = tile_x, source_id = QID(tile_x) }
-        return last + 1
-      end
-    end
-  end
-  return last
-end
-
-local function PATH_OR_JUNCTION(tile_x)
-  return tile_x and (tile_x.path or tile_x.junction)
-end
-
-local function PLATFORM_OR_SLEEP(tile_x)
-  return tile_x and (tile_x.pickup or tile_x.drop or tile_x.resting)
-end
-
-local function calculate_path(surface, from, to)
-  log_actions("start search: " .. from.x .. ":" .. from.y .. " " .. to.x .. ":" .. to.y)
-  if (not surface) or (not from) or (not to) then
-    return nil
-  end
-  
-  w_path_id = from.x .. "_" .. from.y .. "-" .. to.x .. "_" .. to.y
-  
-  if global.land_logistic.paths_w[w_path_id] then
-    return nil
-  end
-  
-  local QUEUE = {}
-  local VISITED = {}
-  local qstart = 0
-  local qend = 1
-  local fqid = QID(from)
-  local eqid = QID(to)
-  local path_found = false
-  
-  --PATH CALCULATOR
-  QUEUE[qstart] = get_tile(from.x, from.y)
-  VISITED[QID(from)] = {}
-  
-  while QUEUE[qstart] do
-    --POP START
-    local cur = QUEUE[qstart] -- TILE_X
-    QUEUE[qstart] = nil
-    qstart = qstart + 1
-    --POP END
-    
-    --CHECK SIDES
-    local x = cur.x
-    local y = cur.y
-    local cqid = QID(cur)
-    local enqueue_helpers = false
-    log_actions( "pop:" .. cur.x .. " " .. cur.y)
-    
-    if cqid == eqid then 
-      path_found = true
-      QUEUE[qstart] = nil
-    else
-      log_actions(cur.dir)
-      if cur.path then
-      --[[
-        local tn = get_tile(x, y - 1)
-        local te = get_tile(x + 1, y)
-        local ts = get_tile(x, y + 1)
-        local tw = get_tile(x - 1, y)
-      ]]
-        if cur.dir == "path-n" then
-          qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y - 1)
-        elseif cur.dir == "path-e" then
-          qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x + 1, cur.y)
-        elseif cur.dir == "path-s" then
-          qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y + 1)
-        elseif cur.dir == "path-w" then
-          qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x - 1, cur.y)
-        end
-        log_actions(qend)
-        -- ENQUEUE drops, pickups, rest_boxes
-        enqueue_helpers = true
-      elseif cur.junction or cur.cross then
-        qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y - 1)
-        qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x + 1, cur.y)
-        qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y + 1)
-        qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x - 1, cur.y)
-        -- ENQUEUE drops, pickups, rest_boxes
-        enqueue_helpers = true
-      elseif PLATFORM_OR_SLEEP(cur) then
-        local helper_n = get_tile(cur.x, cur.y - 1)
-        local helper_e = get_tile(cur.x + 1, cur.y)
-        local helper_s = get_tile(cur.x, cur.y + 1)
-        local helper_w = get_tile(cur.x - 1, cur.y)
-        if PATH_OR_JUNCTION(helper_n) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y - 1) end
-        if PATH_OR_JUNCTION(helper_e) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x + 1, cur.y) end
-        if PATH_OR_JUNCTION(helper_s) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y + 1) end
-        if PATH_OR_JUNCTION(helper_w) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x - 1, cur.y) end
-      end
-      
-      if enqueue_helpers then
-        local helper_n = get_tile(cur.x, cur.y - 1)
-        local helper_e = get_tile(cur.x + 1, cur.y)
-        local helper_s = get_tile(cur.x, cur.y + 1)
-        local helper_w = get_tile(cur.x - 1, cur.y)
-        if PLATFORM_OR_SLEEP(helper_n) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y - 1) end
-        if PLATFORM_OR_SLEEP(helper_e) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x + 1, cur.y) end
-        if PLATFORM_OR_SLEEP(helper_s) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x, cur.y + 1) end
-        if PLATFORM_OR_SLEEP(helper_w) then qend = ENQUEUE(QUEUE, VISITED, qend, cur, cur.x - 1, cur.y) end
-      end
-    end
-  end
-  
-  if path_found then
-    local path_flipped = {}
-    local idx = 1
-    local pqid = eqid
-    local last = to
-    local vcur
-    while pqid ~= fqid do
-      vcur = VISITED[pqid]
-      if vcur.crossed then
-        path_flipped[idx] = {
-          x = vcur.crossed.x,
-          y = vcur.crossed.y,
-          dir = vcur.crossed.dir
-        }
-        idx = idx + 1
-      end
-      path_flipped[idx] = {
-        x = last.x,
-        y = last.y,
-        dir = last.dir
-      }
-      pqid = vcur.source_id
-      last = vcur.source
-      idx = idx + 1
-    end
-    path_flipped[idx] = {
-      x = from.x,
-      y = from.y,
-      dir = from.dir
-    } 
-    local path = {}
-    local diversion = #path_flipped + 1
-    for i,v in pairs(path_flipped) do
-      path[diversion - i] = v
-    end
-    set_path(from, to, path)
-    log_actions("Path found: " .. from.x .. ":" .. from.y .. " " .. to.x .. ":" .. to.y)
-    return path
-  else
-    log_actions("Path not found: " .. from.x .. ":" .. from.y .. " " .. to.x .. ":" .. to.y)
-    global.land_logistic.paths_w[w_path_id] = 1
-    return nil
-  end
-end
-
 local function check_path(surface, start_pos, end_pos)
---  log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
---  export_data()
+  --log_actions("getting path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
   local path = get_path(start_pos, end_pos)
   if path then
+    --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
     for _,tile_entry in pairs(path) do
       local tile = surface.get_tile(tile_entry.x, tile_entry.y)
       if not tile.name:gmatch(".*" .. tile_entry.dir) then 
@@ -420,56 +264,68 @@ local function check_path(surface, start_pos, end_pos)
     end
   end
   if not path then
-    path = calculate_path(surface, start_pos, end_pos)
+    --log_actions("calculating path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
+    path = global.land_logistic.PATH_FINDER:register(surface, start_pos, end_pos)
   end
   return path
 end
 
-local search_job = function(robot) 
+local function search_job(robot) 
   -- SEARCHING FOR DROP
---  log_actions("searching of drop")
+  --log_actions("searching of drop")
   for _,drop in pairs(global.land_logistic.drops) do
-    if drop.served then goto next_drop end
+    if get_robot(drop.served) then goto next_drop end
     local drop_p = get_platform_by_id(drop.platform_id)
     if (not drop_p) and (not drop_p.res) then goto next_drop end
     -- SEARCHING FOR PICKUP
---    log_actions("searching of pickup for platform="..drop_p.id)
+    --log_actions("searching of pickup for platform="..drop_p.id)
+    local next_point
+    
     for _,pickup_p in pairs(global.land_logistic.platforms) do
+      --log_actions("searching testing platform="..pickup_p.id)
       if drop_p.res == pickup_p.res then
-        local next_point
-        for _,pickup_pos in pairs(pickup_p.tiles) do
+        --log_actions("same resource="..drop_p.res)
+        for pickup_id, pickup_pos in pairs(pickup_p.tiles) do
+          --log_actions("platform position type="..pickup_pos.dir)
           if pickup_pos.dir == "path-p" then
+            --log_actions("tested pickup="..serpent.block(pickup_pos))
             next_point = get_tile_round(pickup_pos.x, pickup_pos.y)
-            if (not next_point.served) 
-            and check_path(robot.entity.surface, position(next_point), position(drop)) then 
+            if not next_point then
+              --log_actions("pickup do not exist")
+            elseif get_robot(next_point.served) then
+              --log_actions("point is used")
+            elseif check_path(robot.entity.surface, pickup_pos, position(drop)) then 
+              --log_actions("path found")
               goto point_found
+            else 
+              --log_actions("path not found")
             end
           end
         end
         for _,rest_pos in pairs(pickup_p.resting) do
           next_point = get_tile_round(rest_pos.x, rest_pos.y)
-          if (not next_point.served) 
-          and check_path(robot.entity.surface, position(next_point), position(drop)) then
+          if next_point and (not next_point.served) 
+          and check_path(robot.entity.surface, rest_pos, position(drop)) then
             goto point_found
           end
         end
-        goto next_drop
-        ::point_found::
-        log_actions("searching of pickup point found id="..next_point.id)
-        robot.path = check_path(robot.entity.surface, position(robot.tile), position(next_point))
-        if robot.path then
-          robot.entity.surface.create_entity{
-            name = "flying-text", 
-            position = robot.entity.position, 
-            text = {"land_logistic.state-resource", {"item-name." .. drop_p.res} or {"entity-name." .. drop_p.res}}
-          }
-          robot.destination = position(next_point)
-          robot.state = 1 --[[RUN]]
-          drop.served = true
-          next_point.served = true
-          return
-        end
       end
+    end
+    goto next_drop
+    ::point_found::
+    --log_actions("searching of pickup point found id="..next_point.id)
+    robot.path = check_path(robot.entity.surface, position(robot.tile), position(next_point))
+    if robot.path then
+      robot.entity.surface.create_entity{
+        name = "flying-text", 
+        position = robot.entity.position, 
+        text = {"land_logistic.state-resource", {"item-name." .. drop_p.res} or {"entity-name." .. drop_p.res}}
+      }
+      robot.destination = position(next_point)
+      robot.state = 1 --[[RUN]]
+      drop.served = robot.id
+      next_point.served = robot.id
+      return
     end
     ::next_drop::
   end
@@ -481,7 +337,10 @@ end
 
 local on_tick = function(event)
   check_tables()
-  reset_path_calculation()
+--  log_actions(serpent.block(global.land_logistic.PATH_FINDER))
+  if (event.tick % 10) == 0 then
+    global.land_logistic.PATH_FINDER:tick()
+  end
 --  game.print(global.land_logistic.robots.count or 0)
  
   for _, flag in pairs(global.land_logistic.filters) do
@@ -496,13 +355,28 @@ local on_tick = function(event)
     robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
     if robot.tile then
       --game.print{"", robot.tile.name}
-      if robot.state == 0 --[[IDDLE]] then
-        search_job(robot)
-      else
+      --log_actions("robot state: " .. robot.state)
+      if robot.state == 1 --[[RUN]] then
         move_robot()
       end
     else
       --game.print{"", "off-grid"}
+    end
+  end
+  
+  if (event.tick % 60) == 0 then
+    for _, robot in pairs(global.land_logistic.robots) do
+      robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
+      if robot.tile then
+        --game.print{"", robot.tile.name}
+        --log_actions("robot state: " .. robot.state)
+        if robot.state == 0 --[[IDDLE]] then
+          search_job(robot)
+          break
+        end
+      else
+        --game.print{"", "off-grid"}
+      end
     end
   end
 end
@@ -531,7 +405,11 @@ local on_built_entity = function(event)
   if not entity then return end
   
   if entity.name == "land-robot" then
-    entity.backer_name = {"land_logistic.state-iddle"}
+    entity.surface.create_entity{
+      name = "flying-text", 
+      position = entity.position, 
+      text = {"land_logistic.state-iddle"}
+    }
     global.land_logistic.robots[entity.unit_number] = {
       id = entity.unit_number,
       state = 0 --[[IDDLE]],
