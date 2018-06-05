@@ -1,4 +1,7 @@
-Queue = {}
+Queue = {
+  lower_first = 0,
+  higher_first = 1
+}
 Queue.__index = Queue
 
 setmetatable(Queue, {
@@ -6,44 +9,6 @@ setmetatable(Queue, {
     return cls.new(...)
   end,
 })
-
--- DO NOT USE FOR ADDING
-function Queue:lower_first(data, priority)
-  if self.first then
-    if priority < self.first.priority then
-      self.first = { data = data, priority = priority, next = self.first }
-    else
-      local ptr = self.first
-      while ptr.next 
-      and ptr.next.priority 
-      and priority > ptr.next.priority do --condition
-        ptr = ptr.next 
-      end
-      ptr.next = { data = data, priority = priority, next = ptr.next }
-    end
-  else
-    self.first = { data = data, priority = priority }
-  end
-end
-
--- DO NOT USE FOR ADDING
-function Queue:higher_first(data, priority)
-  if self.first then
-    if priority > self.first.priority then
-      self.first = { data = data, priority = priority, next = self.first }
-    else
-      local ptr = self.first
-      while ptr.next 
-      and ptr.next.priority 
-      and priority < ptr.next.priority do --condition
-        ptr = ptr.next 
-      end
-      ptr.next = { data = data, priority = priority, next = ptr.next }
-    end
-  else
-    self.first = { data = data, priority = priority }
-  end
-end
 
 function Queue.new(data, priority, priority_order)
   local self = setmetatable({}, Queue)
@@ -53,6 +18,43 @@ function Queue.new(data, priority, priority_order)
     self:push(data, priority)
   end
   return self
+end
+
+-- DO NOT USE FOR ADDING
+function Queue:add_priorited(data, priority)
+  if self.priority_order == Queue.lower_first then
+  	if self.first then
+	  if priority < self.first.priority then
+	    self.first = { data = data, priority = priority, next = self.first }
+	  else
+	    local ptr = self.first
+	    while ptr.next 
+	    and ptr.next.priority 
+	    and priority > ptr.next.priority do --condition
+	      ptr = ptr.next 
+	    end
+	    ptr.next = { data = data, priority = priority, next = ptr.next }
+	  end
+	else
+	  self.first = { data = data, priority = priority }
+	end
+  elseif self.priority_order == Queue.higher_first then
+	  if self.first then
+	    if priority > self.first.priority then
+	      self.first = { data = data, priority = priority, next = self.first }
+	    else
+	      local ptr = self.first
+	      while ptr.next 
+	      and ptr.next.priority 
+	      and priority < ptr.next.priority do --condition
+	        ptr = ptr.next 
+	      end
+	      ptr.next = { data = data, priority = priority, next = ptr.next }
+	    end
+	  else
+	    self.first = { data = data, priority = priority }
+	  end
+  end
 end
 
 -- DO NOT USE FOR ADDING
@@ -75,7 +77,7 @@ end
 
 function Queue:push(data, priority)
   if priority then
-    self:priority_order(data, priority)
+    self:add_priorited(data, priority)
   elseif self.first then
     if self.first.priority then
       self:add_after_priority(data, priority)

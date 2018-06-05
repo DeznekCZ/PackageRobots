@@ -3,8 +3,11 @@
   
   Author: Zdenek Novotny (DeznekCZ)
 ]]
+require("control.queue")
 require("control.pathfinder")
 require("control.robot")
+
+PATH_FINDER = {}
 
 local function reset_log() 
   game.write_file("land_logistic.log", "", false)
@@ -35,11 +38,11 @@ local check_tables = function()
 --PATH DATA
   if not ll.paths        then ll.paths        = {} end -- pre-calculated paths
   if not ll.paths_w      then ll.paths_w      = {} end -- pre-calculated paths
---ROBOTS DATA
-  if not ll.robots       then ll.robots       = {} end -- list of robots
   
-  if not ll.PATH_FINDER  then ll.PATH_FINDER  = PathFinder.new(ll) end
-  if not ll.Robots       then ll.Robots       = Robots else Robots = ll.Robots end
+  if not ll.path_finder  then
+  	ll.path_finder = PathFinder.new(ll)
+  	PATH_FINDER = ll.path_finder
+  end
 end
 
 local function reset_path_calculation()
@@ -76,7 +79,7 @@ local function get_tile_round(x, y)
 end
 
 local function calculate_rest_points(platform)
-  platform.resting:push(rest_id, #path)
+  --platform.resting:push(rest_id, #path)
 end
 
 local function get_tile(fx, fy)
@@ -144,6 +147,7 @@ local function init_tile(tile_x)
   local ts = get_tile(x, y + 1)
   local tw = get_tile(x - 1, y)
   
+  local platform
   if tile_x.platform then 
     tile_x.platform_id = -1
     
@@ -250,10 +254,6 @@ local function set_path(start_pos, end_pos, path)
   end
 end
 
-local function check_path(surface, start_pos, end_pos)
-  return global.land_logistic.PATH_FINDER:register(surface, start_pos, end_pos)
-end
-
 local function check_filters()
   for _, flag in pairs(global.land_logistic.filters) do
     if flag then
@@ -268,9 +268,9 @@ local on_tick = function(event)
   check_tables()
   check_filters()
   
-  global.land_logistic.PATH_FINDER:tick(event.tick)
+  PATH_FINDER:tick()
   
-  Robot.tick(game.surfaces[1])
+  Robot.tick(event.tick)
 end
 
 local on_built_tile = function(event)

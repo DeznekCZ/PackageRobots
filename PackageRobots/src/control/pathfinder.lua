@@ -42,18 +42,9 @@ function PathFinder:log_actions(text)
   game.write_file("land_logistic.log", text .. "\n", true)
 end
 
---[[ the : syntax here causes a "self" arg to be implicitly added before any other args
-function MyClass:set_value(newval)
-  self.value = newval
-end]]
---[[
-function MyClass:get_value()
-  return self.value
-end]]
-
 function PathFinder.DEBUG(self, tile_x)
---[[] -- give here a bracket for see debug mode
-  game.players[1].character.surface.create_entity{
+--[[]] -- give here a bracket for see debug mode
+  self.last.surface.create_entity{
         name = "wooden-chest", 
         position = tile_x,
         force = game.players[1].force
