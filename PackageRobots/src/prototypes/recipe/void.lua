@@ -112,7 +112,7 @@ data:extend(
       {"void-material", 1}
     },
     result = "electronic-circuit"
-  },
+  }--[[,
   {
     type = "item",
     name = "concrete-path",
@@ -129,8 +129,9 @@ data:extend(
       condition = { "water-tile" }
     }
   },
-  concrete_path("PackageRobots", "a",  "n", "",  {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"})
-})
+  concrete_path("PackageRobots", "a", "n", "",  {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "w", "a", "",  {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"})
+--[[]]})
 
 data.raw["recipe"]["hazard-concrete"].enabled = true
 data.raw["recipe"]["fast-inserter"].enabled = true

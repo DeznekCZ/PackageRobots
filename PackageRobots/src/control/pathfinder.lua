@@ -117,7 +117,7 @@ function PathFinder.set_path(self, start_pos, end_pos, path)
   end
 end
 
-function PathFinder:register(surface, from, to)
+function PathFinder:register(surface, from, to, tries)
   if (not surface) or (not from) or (not to) then
     return nil
   end
@@ -127,19 +127,21 @@ function PathFinder:register(surface, from, to)
   
   local reg = self.registration[w_path_id]
   if reg and reg.calculated then
-    path = reg.path
+    path.path = reg.path
   elseif reg then
+    path.invalid = true
+    path.tries = reg.tries
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] is in queue")
   else
     do_calculation = true
   end
   
-  if path then
+  if path.path then
     --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    for _,tile_entry in pairs(path) do
+    for _,tile_entry in pairs(path.path) do
       local tile = surface.get_tile(tile_entry.x, tile_entry.y)
       if not tile.name:gmatch(".*" .. tile_entry.dir) then 
-        path = nil
+        path.path = nil
         do_calculation = true
         break
       end
@@ -147,18 +149,21 @@ function PathFinder:register(surface, from, to)
   end
   
   if do_calculation then
+    path.invalid = true
     reg = {
       calculated = false,
       surface = surface,
       from = from,
       to = to,
-      id = w_path_id
+      id = w_path_id,
+      tries_limit = tries
     }
     self.registration[w_path_id] = reg
     self.queue:push(reg)
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] registered")
   end
   
+  if tries and tries == reg.tries then self.registration[w_path_id] = nil end
   return path
 end
 
@@ -387,6 +392,7 @@ function PathFinder:tick()
     last.fqid = nil
     last.eqid = nil
     last.path_found = nil
+    last.tries = 1 + (last.tries or 0)
     last.calculated = true
   -- QUEUE IS EMPTY
   elseif last.queue:is_empty() then
@@ -396,7 +402,11 @@ function PathFinder:tick()
     last.queue = nil
     last.visited = nil
     last.path_found = nil
-    self.queue:push(last)
+    last.tries = 1 + (last.tries or 0)
+    if last.tries_limit 
+    and last.tries_limit < last.tries then
+      self.queue:push(last)
+    end
   -- STEP SESSION
   else                    
     last.path_found = PathFinder.STEP(self, 

@@ -109,3 +109,20 @@ function Queue:is_empty()
     return true
   end
 end
+
+--[[ 
+FE_FUNCTION 
+  attrinutes: DATA - data of current pointer
+  return: any value if may break
+
+returns any value of break
+]]
+function Queue:for_each(fe_function)
+  local ptr = self.first
+  local broken
+  while ptr and not broken do
+    broken = fe_function(ptr.data)
+    ptr = ptr.next
+  end
+  return broken
+end

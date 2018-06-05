@@ -4,6 +4,7 @@
   Author: Zdenek Novotny (DeznekCZ)
 ]]
 require("control.pathfinder")
+require("control.robot")
 
 local function reset_log() 
   game.write_file("land_logistic.log", "", false)
@@ -38,6 +39,7 @@ local check_tables = function()
   if not ll.robots       then ll.robots       = {} end -- list of robots
   
   if not ll.PATH_FINDER  then ll.PATH_FINDER  = PathFinder.new(ll) end
+  if not ll.Robots       then ll.Robots       = Robots else Robots = ll.Robots end
 end
 
 local function reset_path_calculation()
@@ -64,10 +66,6 @@ local function get_platform_by_id(id)
   return global.land_logistic.platforms[id]
 end
 
-local function get_robot(robot_id)
-  if robot_id then return global.land_logistic.robots[robot_id] end
-end
-
 local function get_tile_round(x, y)
   local x_path = global.land_logistic.tiles[x]
   if x_path then 
@@ -78,7 +76,7 @@ local function get_tile_round(x, y)
 end
 
 local function calculate_rest_points(platform)
-  
+  platform.resting:push(rest_id, #path)
 end
 
 local function get_tile(fx, fy)
@@ -106,6 +104,7 @@ local function attach_platform(from, to)
       platform.tiles[tile.id] = { x = tile_loc.x, y = tile_loc.y, dir = tile_loc.dir }
       tile.platform_id = platform.id
     end
+    calculate_rest_points(global.land_logistic.platforms[platform.id])
   end
 end
 
@@ -160,7 +159,7 @@ local function init_tile(tile_x)
         tiles = {
           [tile_x.id] = { x = tile_x.x, y = tile_x.y, dir = tile_x.dir }
         },
-        resting = {}
+        resting = Queue.new()
       }
       calculate_rest_points(platform)
       global.land_logistic.platforms[tile_x.platform_id] = platform
@@ -181,6 +180,7 @@ local function init_tile(tile_x)
     return true
   elseif tile_x.resting then    
     global.land_logistic.resting[id] = tile_x
+    calculate_rest_points(platform)
     return true
   elseif tile_x.junction then
     
@@ -254,79 +254,7 @@ local function check_path(surface, start_pos, end_pos)
   return global.land_logistic.PATH_FINDER:register(surface, start_pos, end_pos)
 end
 
-local function search_job(robot) 
-  -- SEARCHING FOR DROP
-  --log_actions("searching of drop")
-  for _,drop in pairs(global.land_logistic.drops) do
-    if get_robot(drop.served) then goto next_drop end
-    local drop_p = get_platform_by_id(drop.platform_id)
-    if (not drop_p) and (not drop_p.res) then goto next_drop end
-    -- SEARCHING FOR PICKUP
-    --log_actions("searching of pickup for platform="..drop_p.id)
-    local next_point
-    
-    for _,pickup_p in pairs(global.land_logistic.platforms) do
-      --log_actions("searching testing platform="..pickup_p.id)
-      if drop_p.res == pickup_p.res then
-        --log_actions("same resource="..drop_p.res)
-        for pickup_id, pickup_pos in pairs(pickup_p.tiles) do
-          --log_actions("platform position type="..pickup_pos.dir)
-          if pickup_pos.dir == "path-p" then
-            --log_actions("tested pickup="..serpent.block(pickup_pos))
-            next_point = get_tile_round(pickup_pos.x, pickup_pos.y)
-            if not next_point then
-              --log_actions("pickup do not exist")
-            elseif get_robot(next_point.served) then
-              --log_actions("point is used")
-            elseif check_path(robot.entity.surface, pickup_pos, position(drop)) then 
-              --log_actions("path found")
-              goto point_found
-            else 
-              --log_actions("path not found")
-            end
-          end
-        end
-        for _,rest_pos in pairs(pickup_p.resting) do
-          next_point = get_tile_round(rest_pos.x, rest_pos.y)
-          if next_point and (not next_point.served) 
-          and check_path(robot.entity.surface, rest_pos, position(drop)) then
-            goto point_found
-          end
-        end
-      end
-    end
-    goto next_drop
-    ::point_found::
-    --log_actions("searching of pickup point found id="..next_point.id)
-    robot.path = check_path(robot.entity.surface, position(robot.tile), position(next_point))
-    if robot.path then
-      robot.entity.surface.create_entity{
-        name = "flying-text", 
-        position = robot.entity.position, 
-        text = {"land_logistic.state-resource", game.item_prototypes[drop_p.res].localised_name}
-      }
-      robot.destination = position(next_point)
-      robot.state = 1 --[[RUN]]
-      drop.served = robot.id
-      next_point.served = robot.id
-      return
-    end
-    ::next_drop::
-  end
-end
-
-local move_robot = function(robot)
-  
-end
-
-local on_tick = function(event)
-  check_tables()
---  log_actions(serpent.block(global.land_logistic.PATH_FINDER))
---if (event.tick % 10) == 0 then
-  global.land_logistic.PATH_FINDER:tick()
---end
---  game.print(global.land_logistic.robots.count or 0)
- 
+local function check_filters()
   for _, flag in pairs(global.land_logistic.filters) do
     if flag then
       local tile_x = get_tile(flag.position.x, flag.position.y)
@@ -334,40 +262,23 @@ local on_tick = function(event)
       platform.res = flag.get_filter(1)
     end
   end
+end
+
+local on_tick = function(event)
+  check_tables()
+  check_filters()
   
-  for _, robot in pairs(global.land_logistic.robots) do
-    robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
-    if robot.tile then
-      --game.print{"", robot.tile.name}
-      --log_actions("robot state: " .. robot.state)
-      if robot.state == 1 --[[RUN]] then
-        move_robot()
-      end
-    else
-      --game.print{"", "off-grid"}
-    end
-  end
+  global.land_logistic.PATH_FINDER:tick(event.tick)
   
-  if (event.tick % 60) == 0 then
-    for _, robot in pairs(global.land_logistic.robots) do
-      robot.tile = get_tile(robot.entity.position.x, robot.entity.position.y)
-      if robot.tile then
-        --game.print{"", robot.tile.name}
-        --log_actions("robot state: " .. robot.state)
-        if robot.state == 0 --[[IDDLE]] then
-          search_job(robot)
-          break
-        end
-      else
-        --game.print{"", "off-grid"}
-      end
-    end
-  end
+  Robot.tick(game.surfaces[1])
 end
 
 local on_built_tile = function(event)
   check_tables()
-  local surface = game.surfaces[event.surface_index]
+  local surface
+  if event.player_index then surface = game.players[event.player_index].surface end
+  if event.robot then surface = event.robot.surface end
+  
   local tiles = event.tiles
   for _,tile in pairs(tiles) do
     set_tile(tile.position.x, tile.position.y, surface.get_tile(tile.position.x, tile.position.y))
@@ -389,17 +300,7 @@ local on_built_entity = function(event)
   if not entity then return end
   
   if entity.name == "land-robot" then
-    entity.surface.create_entity{
-      name = "flying-text", 
-      position = entity.position, 
-      text = {"land_logistic.state-iddle"}
-    }
-    global.land_logistic.robots[entity.unit_number] = {
-      id = entity.unit_number,
-      state = 0 --[[IDDLE]],
-      entity = entity,
-      tile = get_tile(entity.position.x, entity.position.y)
-    }
+    Robot.create(entity)
   elseif entity.name == "resource-flag" then
     global.land_logistic.filters[entity.unit_number] = entity
   
@@ -422,7 +323,7 @@ local on_mined_entity = function(event)
   local entity = event.entity
   
   if entity and entity.name == "land-robot" then
-    global.land_logistic.robots[entity.unit_number] = nil
+    Robot.robots[entity.unit_number] = nil
   end
 end
 
