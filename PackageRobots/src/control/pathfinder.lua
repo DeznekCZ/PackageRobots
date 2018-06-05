@@ -32,6 +32,8 @@ function PathFinder.new(data)
   self.data = data
   self.queue = Queue.new()
   self.registration = {}
+  self.per_tick = 5
+  --self.debud for change see line 55
   
   return self
 end
@@ -70,6 +72,31 @@ function PathFinder.TILE(self, x, y)
   else 
     return nil
   end
+end
+
+ --[[ tile_x not nil ]]
+function PathFinder.SUM(self, tile_a, tile_b)
+  return { x = tile_a.x + tile_b.x, y = tile_a.y + tile_b.y }
+end
+
+ --[[ tile_x not nil ]]
+function PathFinder.DIFF(self, tile_a, tile_b)
+  return { x = tile_a.x - tile_b.x, y = tile_a.y - tile_b.y }
+end
+
+ --[[ tile_x not nil ]]
+function PathFinder.MULTIPLE_EACH(self, tile_a, tile_b)
+  return { x = tile_a.x * tile_b.x, y = tile_a.y * tile_b.y }
+end
+
+ --[[ tile_x not nil ]]
+function PathFinder.DIST(self, tile_x)
+  local diff_a = PathFinder.DIFF(self, self.last.from, tile_x)
+  local diff_b = PathFinder.DIFF(self, self.last.to,   tile_x)
+  local mult_a = PathFinder.MULTIPLE_EACH(self, diff_a, diff_a)
+  local mult_b = PathFinder.MULTIPLE_EACH(self, diff_b, diff_b)
+  local sum    = PathFinder.SUM(self, mult_a, mult_b)
+  return (sum.x) + (sum.y)
 end
 
 function PathFinder.TILE_P(self, position)
@@ -154,14 +181,14 @@ function PathFinder.ENQUEUE(self, cur, queue, visited, x, y)
         local vqid = PathFinder.QID(self, cross_tile)
         if not visited[vqid] then 
           visited[vqid] = { source = cur, source_id = PathFinder.QID(self, cur), crossed = cross_path }
-          queue:push(cross_tile)
+          queue:push(cross_tile, self:DIST(cross_tile))
         end
       end
     else
       local vqid = PathFinder.QID(self, NT)
       if not visited[vqid] then 
         visited[vqid] = { source = cur, source_id = PathFinder.QID(self, cur) }
-        queue:push(NT)
+        queue:push(NT, self:DIST(NT))
       end
     end
   end
@@ -373,7 +400,7 @@ function PathFinder:tick()
   -- STEP SESSION
   else                    
     last.path_found = PathFinder.STEP(self, 
-      5, -- COUNT GIVEN LATER BY CONFIG
+      self.per_tick, -- COUNT GIVEN LATER BY CONFIG
       last.queue,
       last.visited,
       last.fqid,

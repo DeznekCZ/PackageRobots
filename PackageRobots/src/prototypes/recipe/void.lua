@@ -112,7 +112,24 @@ data:extend(
       {"void-material", 1}
     },
     result = "electronic-circuit"
-  }
+  },
+  {
+    type = "item",
+    name = "concrete-path",
+    icon = "__PackageRobots__/graphics/icons/concrete-path.png",
+    icon_size = 32,
+    flags = {"goes-to-quickbar"},
+    subgroup = "logistic-network",
+    order = "p[concrete]-a[plain]",
+    stack_size = 100,
+    place_as_tile =
+    {
+      result = "concrete-path-a",
+      condition_size = 1,
+      condition = { "water-tile" }
+    }
+  },
+  concrete_path("PackageRobots", "a",  "n", "",  {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"})
 })
 
 data.raw["recipe"]["hazard-concrete"].enabled = true
