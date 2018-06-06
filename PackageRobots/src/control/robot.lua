@@ -15,19 +15,28 @@ Robot = {
   c_rest_run        = Queue.new(),
   -- Robots path calculation requests for run to drop point
   c_drop_run        = Queue.new(),
-
-  run_wait     = Queue.new(), -- Robots running to Rest_Tile_X with waiting for free pickup
-  iddle_wait   = Queue.new(), -- Robots waiting in Rest_Tile_X for free pickup
-  run_pickup   = Queue.new(), -- Robots running to Pickup_Tile_X
-  run_drop     = Queue.new(), -- Robots running to Drop_Tile_X
   
-  fill         = Queue.new(), -- Robots waiting in Pickup_Tile_X for fill
-  unload       = Queue.new(), -- Robots waiting in Drop_Tile_X for fill
+  -- Robots running to Rest_Tile_X with waiting for free pickup
+  run_wait     = Queue.new(), 
+  -- Robots waiting in Rest_Tile_X for free pickup
+  iddle_wait   = Queue.new(),
+  -- Robots running to Pickup_Tile_X
+  run_pickup   = Queue.new(),
+  -- Robots running to Drop_Tile_X
+  run_drop     = Queue.new(),
   
-  iddle        = Queue.new(), -- Robots waiting in Rest_Tile_X for free drop
-  run_iddle    = Queue.new(), -- Robots running to Rest_Tile_X with waiting for free drop
+  -- Robots waiting in Pickup_Tile_X for fill
+  fill         = Queue.new(),
+  -- Robots waiting in Drop_Tile_X for fill
+  unload       = Queue.new(),
   
-  no_path     = Queue.new(), -- Robots with no path
+  -- Robots waiting in Rest_Tile_X for free drop
+  iddle        = Queue.new(),
+  -- Robots running to Rest_Tile_X with waiting for free drop
+  run_iddle    = Queue.new(),
+  
+  -- Robots with no path
+  no_path     = Queue.new(),
   
   get = function(robot_id)
     return Robot.robots[robot_id]
@@ -78,6 +87,44 @@ Robot = {
     end,
   }
 }
+
+function Robot.init_queues(land_logistic)
+  Robot.register          = Queue.restore(land_logistic.robot_queues.register)
+  Robot.c_pickup_rest_run = Queue.restore(land_logistic.robot_queues.c_pickup_rest_run)
+  Robot.c_pickup_run      = Queue.restore(land_logistic.robot_queues.c_pickup_run)
+  Robot.c_rest_run        = Queue.restore(land_logistic.robot_queues.c_rest_run)
+  Robot.c_drop_run        = Queue.restore(land_logistic.robot_queues.c_drop_run)
+  Robot.run_wait          = Queue.restore(land_logistic.robot_queues.run_wait)
+  Robot.iddle_wait        = Queue.restore(land_logistic.robot_queues.iddle_wait)
+  Robot.run_pickup        = Queue.restore(land_logistic.robot_queues.run_pickup)
+  Robot.run_drop          = Queue.restore(land_logistic.robot_queues.run_drop)
+  Robot.fill              = Queue.restore(land_logistic.robot_queues.fill)
+  Robot.unload            = Queue.restore(land_logistic.robot_queues.unload)
+  Robot.iddle             = Queue.restore(land_logistic.robot_queues.iddle)
+  Robot.run_iddle         = Queue.restore(land_logistic.robot_queues.run_iddle)
+  Robot.no_path           = Queue.restore(land_logistic.robot_queues.no_path)
+  
+  Robot.copy_queues(land_logistic)
+end
+
+function Robot.copy_queues(land_logistic)
+  land_logistic.robot_queues = {
+    register          = Robot.register,
+    c_pickup_rest_run = Robot.c_pickup_rest_run,
+    c_pickup_run      = Robot.c_pickup_run,
+    c_rest_run        = Robot.c_rest_run,
+    c_drop_run        = Robot.c_drop_run,
+    run_wait          = Robot.run_wait,
+    iddle_wait        = Robot.iddle_wait,
+    run_pickup        = Robot.run_pickup,
+    run_drop          = Robot.run_drop,
+    fill              = Robot.fill,
+    unload            = Robot.unload,
+    iddle             = Robot.iddle,
+    run_iddle         = Robot.run_iddle,
+    no_path           = Robot.no_path
+  }
+end
 
 function Robot.is_served(tile_x)
   if tile_x 
@@ -193,19 +240,42 @@ end
     tile, -- last visited point
   }
 ]]
-function Robot.move(robot)
-  local robot_tile = PATH_FINDER:TILE(math.floor(robot.x), math.floor(robot.y))
+function Robot.move(robot, continue, no_path)
+  if not robot or not robot.entity.valid then
+  	return false
+  elseif not Robot.move_tick then
+    continue:push(robot.id)
+    return false
+  end
+  
+  local path = Queue.restore(robot.path)
+  local next_tile = PATH_FINDER:TILE_P(path:pop())
+  
   local destination = robot.destination
   
-  if not robot_tile then
+  if not next_tile then
   	Robot.message.no_path(robot, Robot.message.tick == 0)
+  	robot.next_destination = robot.destination
+  	no_path:push(robot.id)
   	return false
   end
   
-  if destination then
-  	return robot_tile.id == destination.id
+  if not Robot.is_served(next_tile) and robot.entity.teleport(next_tile, robot.entity.surface) then
+  	if next_tile and next_tile.id == destination.id then
+      robot.path = path
+      robot.tile.served = -1
+      robot.tile = next_tile
+      robot.tile.served = robot.id
+      robot.x = robot.entity.position.x
+      robot.y = robot.entity.position.y
+  	  return true
+    else
+      continue:push(robot.id)
+      return false
+    end
   else
-  	return false
+  	continue:push(robot.id)
+    return false
   end
 end
 
@@ -234,7 +304,11 @@ function Robot.check_path(CalcQueue, ResultQueue, ResultMessage)
     elseif search_result.path then
       robot.destination = robot.next_destination
       robot.path = search_result.path
-      ResultMessage(robot, robot.drop_platform.res)
+      if robot.destination.platform then
+        ResultMessage(robot, robot.drop_platform.res)
+      else
+      	Robot.message.iddle(robot)
+      end
       ResultQueue:push(robot.id)
     else
       tmp_q:push(robot.id)
@@ -249,12 +323,13 @@ function Robot.check_path(CalcQueue, ResultQueue, ResultMessage)
 end
 
 function Robot.tick(tick)
+  Robot.move_tick = (tick % 60) == 0
   Robot.message.tick = tick % 40
   
   Robot.check_path(Robot.c_drop_run,        Robot.run_drop,   Robot.message.run_pickup_rest)
   Robot.check_path(Robot.c_pickup_rest_run, Robot.run_wait,   Robot.message.run_pickup_rest)
   Robot.check_path(Robot.c_pickup_run,      Robot.run_pickup, Robot.message.run_pickup)
-  Robot.check_path(Robot.c_rest_run,        Robot.iddle_wait, Robot.message.iddle)
+  Robot.check_path(Robot.c_rest_run,        Robot.run_iddle,  Robot.message.iddle)
   
   while not Robot.register:is_empty() do
     local robot = Robot.get(Robot.register:pop())
@@ -287,10 +362,8 @@ function Robot.tick(tick)
   tmp_q = Queue.new()
   while not Robot.run_iddle:is_empty() do
     local robot = Robot.get(Robot.run_iddle:pop())
-    if robot and Robot.move(robot) then
+    if robot and Robot.move(robot, tmp_q, Robot.c_rest_run) then
       Robot.iddle:push(robot.id)
-    elseif robot then
-      tmp_q:push(robot.id)
     end
   end
   if not tmp_q:is_empty() then
@@ -302,10 +375,8 @@ function Robot.tick(tick)
   tmp_q = Queue.new()
   while not Robot.run_drop:is_empty() do
     local robot = Robot.get(Robot.run_drop:pop())
-    if robot and Robot.move(robot) then
+    if robot and Robot.move(robot, tmp_q, Robot.c_drop_run) then
       Robot.unload:push(robot.id)
-    elseif robot then
-      tmp_q:push(robot.id)
     end
   end
   if not tmp_q:is_empty() then
@@ -317,15 +388,26 @@ function Robot.tick(tick)
   tmp_q = Queue.new()
   while not Robot.run_pickup:is_empty() do
     local robot = Robot.get(Robot.run_pickup:pop())
-    if robot and Robot.move(robot) then
+    if robot and Robot.move(robot, tmp_q, Robot.c_pickup_run) then
       Robot.fill:push(robot.id)
-    elseif robot then
-      tmp_q:push(robot.id)
     end
   end
   if not tmp_q:is_empty() then
   push = function(entry)
   	Robot.run_pickup:push(entry)
+  end 
+  tmp_q:for_each(push) end
+  
+  tmp_q = Queue.new()
+  while not Robot.run_wait:is_empty() do
+    local robot = Robot.get(Robot.run_wait:pop())
+    if robot and Robot.move(robot, tmp_q, Robot.c_pickup_rest_run) then
+      Robot.fill:push(robot.id)
+    end
+  end
+  if not tmp_q:is_empty() then
+  push = function(entry)
+  	Robot.run_wait:push(entry)
   end 
   tmp_q:for_each(push) end
   

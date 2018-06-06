@@ -115,8 +115,7 @@ data:extend(
   concrete_path("PackageRobots", "j", "x", "i", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
   concrete_path("PackageRobots", "x", "j", "i", {r=0, g=0.6, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
   concrete_path("PackageRobots", "d", "p", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
-  concrete_path("PackageRobots", "p", "d", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
-  concrete_path("PackageRobots", "d", "r", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
-  concrete_path("PackageRobots", "r", "l", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
-  concrete_path("PackageRobots", "l", "p", "c", {r=0, g=0.5, b=0.8}, {"item-layer", "object-layer"})
+  concrete_path("PackageRobots", "p", "r", "c", {r=0, g=0.5, b=0.8}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "r", "l", "c", {r=0, g=0.6, b=0.7}, {"ground-tile", "layer-14", "item-layer", "object-layer"}),
+  concrete_path("PackageRobots", "l", "p", "c", {r=0, g=0.5, b=0.9}, {"item-layer", "object-layer"})
 })

@@ -20,6 +20,15 @@ function Queue.new(data, priority, priority_order)
   return self
 end
 
+function Queue.restore(data)
+  local newQueue = Queue.new()
+  newQueue.first = data.first
+  if data.priority_order then 
+  	newQueue.priority_order = data.priority_order
+  end
+  return newQueue
+end
+
 -- DO NOT USE FOR ADDING
 function Queue:add_priorited(data, priority)
   if self.priority_order == Queue.lower_first then

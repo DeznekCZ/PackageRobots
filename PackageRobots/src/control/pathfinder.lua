@@ -41,6 +41,17 @@ function PathFinder.new()
   return self
 end
 
+function PathFinder.restore(data)
+  local self = PathFinder.new()
+  
+  self.queue = Queue.restore(data.path_finder.queue)
+  self.registration = data.path_finder.registration
+  self.per_tick = data.path_finder.per_tick
+  --self.debud for change see line 55
+  
+  return self
+end
+
 function PathFinder:log_actions(text)
   game.write_file("land_logistic.log", text .. "\n", true)
 end
@@ -116,30 +127,32 @@ function PathFinder.set_path(self, start_pos, end_pos, path)
 end
 
 function PathFinder:register(surface, from, to, tries)
+  game.print{"", "PathFinder:register()"}
   if (not surface) or (not from) or (not to) then
     return nil
   end
 
+  local result = {}
   local w_path_id = from.x .. "_" .. from.y .. "-" .. to.x .. "_" .. to.y
   local do_calculation = false
   
   local reg = self.registration[w_path_id]
   if reg and reg.calculated then
-    path.path = reg.path
+    result.path = reg.path
   elseif reg then
-    path.invalid = true
-    path.tries = reg.tries
+    result.invalid = true
+    result.tries = reg.tries
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] is in queue")
   else
     do_calculation = true
   end
   
-  if path.path then
+  if result.path then
     --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    for _,tile_entry in pairs(path.path) do
+    for _,tile_entry in pairs(result.path) do
       local tile = surface.get_tile(tile_entry.x, tile_entry.y)
       if not tile.name:gmatch(".*" .. tile_entry.dir) then 
-        path.path = nil
+        result.path = nil
         do_calculation = true
         break
       end
@@ -147,7 +160,7 @@ function PathFinder:register(surface, from, to, tries)
   end
   
   if do_calculation then
-    path.invalid = true
+    result.invalid = true
     reg = {
       calculated = false,
       surface = surface,
@@ -162,7 +175,7 @@ function PathFinder:register(surface, from, to, tries)
   end
   
   if tries and tries == reg.tries then self.registration[w_path_id] = nil end
-  return path
+  return result
 end
 
 function PathFinder.ENQUEUE(self, cur, queue, visited, x, y)
@@ -354,11 +367,12 @@ function PathFinder.COPY_PATH(self, reg)
     y = reg.from.y,
     dir = reg.from.dir
   } 
-  local path = {}
+  local path = Queue.new(nil,nil,Queue.higher_first)
   local diversion = #path_flipped + 1
   for i,v in pairs(path_flipped) do
-    path[diversion - i] = v
+    path:push(v, i)
   end
+  game.print{"", serpent.block(path)}
   reg.path = path
   PathFinder.set_path(self, self:TILE_P(reg.from), self:TILE_P(reg.to), path)
 end

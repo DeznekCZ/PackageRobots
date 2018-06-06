@@ -16,13 +16,18 @@ local function log_actions(text)
 end
 
 local function export_data() 
-  game.write_file("land_logistic.lua", "data " .. serpent.block(global.land_logistic) .. "\n", false)
-  game.write_file("land_logistic.lua", "path_finder " .. serpent.block(PATH_FINDER) .. "\n", true)
+  game.write_file("land_logistic.lua", "global.land_logistic " .. serpent.block(global.land_logistic) .. "\n", false)
+  game.write_file("land_logistic.lua", "PATH_FINDER " .. serpent.block(PATH_FINDER) .. "\n", true)
+  game.write_file("land_logistic.lua", "Robot " .. serpent.block(Robot) .. "\n", true)
 end
 
 local init = function()
   if not global.land_logistic then global.land_logistic = {} end
-  if not global.land_logistic.path_finder then PATH_FINDER = PathFinder.new() end
+  if not global.land_logistic.path_finder then
+    PATH_FINDER = PathFinder.new()
+  else
+  	PATH_FINDER = PathFinder.restore(global.land_logistic)
+  end
 end
 
 local check_tables = function()
@@ -39,8 +44,16 @@ local check_tables = function()
   if not ll.paths        then ll.paths        = {} end -- pre-calculated paths
   if not ll.paths_w      then ll.paths_w      = {} end -- pre-calculated paths
   
-  if ll.path_finder then
-  	 PATH_FINDER = ll.path_finder
+  if not ll.path_finder then
+  	 ll.path_finder = PATH_FINDER
+  end
+  
+  if ll.robots then
+  	Robot.robots = ll.robots
+  	Robot.init_queues(ll)
+  else
+  	ll.robots = Robot.robots
+  	Robot.copy_queues(ll)
   end
 end
 
@@ -254,11 +267,13 @@ local function set_path(start_pos, end_pos, path)
 end
 
 local function check_filters()
-  for _, flag in pairs(global.land_logistic.filters) do 
-    if flag then
+  for flag_id, flag in pairs(global.land_logistic.filters) do 
+    if flag and flag.valid then
       local tile_x = get_tile(flag.position.x, flag.position.y)
       local platform = global.land_logistic.platforms[tile_x.platform_id]
       platform.res = flag.get_filter(1)
+    else
+     global.land_logistic.filters[flag_id] = nil
     end
   end
 end
