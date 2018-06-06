@@ -7,8 +7,6 @@ require("control.queue")
 require("control.pathfinder")
 require("control.robot")
 
-PATH_FINDER = {}
-
 local function reset_log() 
   game.write_file("land_logistic.log", "", false)
 end
@@ -18,11 +16,13 @@ local function log_actions(text)
 end
 
 local function export_data() 
-  game.write_file("land_logistic.lua", serpent.block(global.land_logistic) .. "\n", false)
+  game.write_file("land_logistic.lua", "data " .. serpent.block(global.land_logistic) .. "\n", false)
+  game.write_file("land_logistic.lua", "path_finder " .. serpent.block(PATH_FINDER) .. "\n", true)
 end
 
 local init = function()
   if not global.land_logistic then global.land_logistic = {} end
+  if not global.land_logistic.path_finder then PATH_FINDER = PathFinder.new() end
 end
 
 local check_tables = function()
@@ -39,9 +39,8 @@ local check_tables = function()
   if not ll.paths        then ll.paths        = {} end -- pre-calculated paths
   if not ll.paths_w      then ll.paths_w      = {} end -- pre-calculated paths
   
-  if not ll.path_finder  then
-  	ll.path_finder = PathFinder.new(ll)
-  	PATH_FINDER = ll.path_finder
+  if ll.path_finder then
+  	 PATH_FINDER = ll.path_finder
   end
 end
 
@@ -255,7 +254,7 @@ local function set_path(start_pos, end_pos, path)
 end
 
 local function check_filters()
-  for _, flag in pairs(global.land_logistic.filters) do
+  for _, flag in pairs(global.land_logistic.filters) do 
     if flag then
       local tile_x = get_tile(flag.position.x, flag.position.y)
       local platform = global.land_logistic.platforms[tile_x.platform_id]

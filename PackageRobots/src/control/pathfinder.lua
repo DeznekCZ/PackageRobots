@@ -26,10 +26,13 @@ setmetatable(PathFinder, {
   end,
 })
 
-function PathFinder.new(data)
+function PathFinder:data()
+	return global.land_logistic
+end
+
+function PathFinder.new()
   local self = setmetatable({}, PathFinder)
   
-  self.data = data
   self.queue = Queue.new()
   self.registration = {}
   self.per_tick = 5
@@ -57,7 +60,7 @@ function PathFinder.QID(self, value)
 end
 
 function PathFinder.TILE(self, x, y)
-  local x_path = self.data.tiles[x]
+  local x_path = self:data().tiles[x]
   if x_path then 
     return x_path[y]
   else 
@@ -91,7 +94,7 @@ function PathFinder.DIST(self, tile_x)
 end
 
 function PathFinder.TILE_P(self, position)
-  local x_path = self.data.tiles[position.x]
+  local x_path = self:data().tiles[position.x]
   if x_path then 
     return x_path[position.y]
   else 
@@ -99,10 +102,14 @@ function PathFinder.TILE_P(self, position)
   end
 end
 
+function PathFinder.PLATFORM(self, platform_id)
+  return self:data().platforms[platform_id]
+end
+
 function PathFinder.set_path(self, start_pos, end_pos, path)
-  local starts = self.data.paths[start_pos.id]
+  local starts = self:data().paths[start_pos.id]
   if not starts then
-    self.data.paths[start_pos.id] = { [end_pos.id] = path }
+    self:data().paths[start_pos.id] = { [end_pos.id] = path }
   else
     starts[end_pos.id] = path
   end

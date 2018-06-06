@@ -91,7 +91,6 @@ function Queue:push(data, priority)
   else
     self.first = { data = data }
   end
-  game.write_file("queue.log", "PUSH: " .. serpent.block(self) .. "\n", true)
 end
 
 function Queue:pop()
@@ -100,7 +99,6 @@ function Queue:pop()
     data = self.first.data
     self.first = self.first.next
   end
-  game.write_file("queue.log", "POP: " .. serpent.block(self) .. "\n", true)
   return data
 end
 
