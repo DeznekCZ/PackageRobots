@@ -57,7 +57,7 @@ function PathFinder:log_actions(text)
 end
 
 function PathFinder.DEBUG(self, tile_x)
---[[]] -- give here a bracket for see debug mode
+--[[] -- give here a bracket for see debug mode
   self.last.surface.create_entity{
         name = "wooden-chest", 
         position = tile_x,
@@ -127,7 +127,6 @@ function PathFinder.set_path(self, start_pos, end_pos, path)
 end
 
 function PathFinder:register(surface, from, to, tries)
-  game.print{"", "PathFinder:register()"}
   if (not surface) or (not from) or (not to) then
     return nil
   end
@@ -149,14 +148,14 @@ function PathFinder:register(surface, from, to, tries)
   
   if result.path then
     --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    for _,tile_entry in pairs(result.path) do
+    local each = function(tile_entry)
       local tile = surface.get_tile(tile_entry.x, tile_entry.y)
       if not tile.name:gmatch(".*" .. tile_entry.dir) then 
         result.path = nil
-        do_calculation = true
-        break
+        return true
       end
     end
+    do_calculation = result.path:for_each(each)
   end
   
   if do_calculation then
@@ -372,7 +371,6 @@ function PathFinder.COPY_PATH(self, reg)
   for i,v in pairs(path_flipped) do
     path:push(v, i)
   end
-  game.print{"", serpent.block(path)}
   reg.path = path
   PathFinder.set_path(self, self:TILE_P(reg.from), self:TILE_P(reg.to), path)
 end

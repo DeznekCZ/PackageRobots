@@ -260,20 +260,32 @@ function Robot.move(robot, continue, no_path)
   	return false
   end
   
-  if not Robot.is_served(next_tile) and robot.entity.teleport(next_tile, robot.entity.surface) then
-  	if next_tile and next_tile.id == destination.id then
-      robot.path = path
-      robot.tile.served = -1
-      robot.tile = next_tile
-      robot.tile.served = robot.id
-      robot.x = robot.entity.position.x
-      robot.y = robot.entity.position.y
-  	  return true
+  if not Robot.is_served(next_tile) then
+    if robot.entity.teleport(next_tile) then
+  	  if next_tile then
+        robot.path = path
+        robot.tile.served = -1
+        robot.tile = next_tile
+        robot.tile.served = robot.id
+        robot.x = robot.entity.position.x
+        robot.y = robot.entity.position.y
+        if next_tile.id == destination.id then
+          return true
+        else
+          continue:push(robot.id)
+          return false
+        end
+      else
+        continue:push(robot.id)
+        return false
+      end
     else
+      game.print{"", "no teleport"}
       continue:push(robot.id)
       return false
     end
   else
+  	game.print{"", "is served"}
   	continue:push(robot.id)
     return false
   end
@@ -304,6 +316,7 @@ function Robot.check_path(CalcQueue, ResultQueue, ResultMessage)
     elseif search_result.path then
       robot.destination = robot.next_destination
       robot.path = search_result.path
+      robot.path:pop()
       if robot.destination.platform then
         ResultMessage(robot, robot.drop_platform.res)
       else
@@ -446,16 +459,26 @@ function Robot.tick(tick)
   while not Robot.no_path:is_empty() do
     local robot = Robot.get(Robot.no_path:pop())
     if robot then
-      local tile = PATH_FINDER:TILE_P(robot)
-      if not tile or robot.entity.get_driver() then 
-      	Robot.message.no_path(robot, Robot.message.tick == 0)
-  	    tmp_q:push(robot.id)
-      elseif tile and not robot.entity.get_driver() then
-      	if not Robot.search_job(robot) then
-      	  Robot.message.no_path(robot, Robot.message.tick == 0)
-	      tmp_q:push(robot.id)
-	    end
-      end
+      if robot.entity.get_driver() then 
+        tmp_q:push(robot.id)
+      else
+	      local tile = PATH_FINDER:TILE_P(robot)
+	      if not tile then 
+	      	Robot.message.no_path(robot, Robot.message.tick == 0)
+	  	    tmp_q:push(robot.id)
+	      elseif tile then
+	      	local free_resting = Robot.free_resting(robot)
+	      	if free_resting then
+	      	  Robot.message.calculating(robot)
+	      	  free_resting.served    = robot.id
+	      	  robot.next_destination = free_resting
+	      	  Robot.c_rest_run:push(robot.id)
+	      	else
+		      Robot.message.no_path(robot, Robot.message.tick == 0)
+		      tmp_q:push(robot.id)
+		    end
+	      end
+	  end
     end
   end
   if not tmp_q:is_empty() then
@@ -478,7 +501,7 @@ function Robot.tick(tick)
           robot.next_destination = free_pickup
           free_pickup.served     = robot.id
           
-          Robot.c_pickup_rest_iddle:push(robot.id)
+          Robot.c_pickup_run:push(robot.id)
           dispach = true
         else
           tmp_q:push(robot.id)
@@ -503,7 +526,7 @@ function Robot.tick(tick)
           robot.next_destination = free_pickup
           free_pickup.served     = robot.id
           
-          Robot.c_pickup_rest_run:push(robot.id)
+          Robot.c_pickup_run:push(robot.id)
         else
           tmp_q:push(robot.id)
         end
