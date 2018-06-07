@@ -66,7 +66,7 @@ Robot = {
       robot.entity.surface.create_entity{
         name = "flying-text", 
         position = robot.entity.position, 
-        text = { "land_logistic.state-resource", game.item_prototypes[resource].localised_name }
+        text = { "land_logistic.state-resource-pickup", game.item_prototypes[resource].localised_name }
       }
     end,
     
@@ -78,13 +78,21 @@ Robot = {
       }
     end,
     
-    calculating = function(robot) 
+    run_drop = function(robot, resource) 
       robot.entity.surface.create_entity{
+        name = "flying-text", 
+        position = robot.entity.position, 
+        text = { "land_logistic.state-resource-drop", game.item_prototypes[resource].localised_name }
+      }
+    end,
+    
+    calculating = function(robot) 
+--[[]robot.entity.surface.create_entity{
         name = "flying-text", 
         position = robot.entity.position, 
         text = { "land_logistic.state-calculating" }
       }
-    end,
+    --]]end,
   }
 }
 
@@ -126,10 +134,11 @@ function Robot.copy_queues(land_logistic)
   }
 end
 
-function Robot.is_served(tile_x)
+function Robot.is_served(tile_x, robot)
   if tile_x 
   and tile_x.served 
-  and Robot.robots[tile_x.served] then
+  and Robot.robots[tile_x.served]
+  and Robot.robots[tile_x.served].id ~= robot.id then
     return Robot.robots[tile_x.served]
   else
     return nil
@@ -139,21 +148,21 @@ end
 function Robot.free_resting(robot)
   local data = PATH_FINDER:data()
   for _,resting in pairs(data.resting) do
-  	if not Robot.is_served(resting) then
+  	if not Robot.is_served(resting, robot) then
   	  return resting
   	end
   end
   return nil
 end
 
-function Robot.free_pickup(pickup_p)
+function Robot.free_pickup(pickup_p, robot)
   local next_point
   for pickup_id, pickup_pos in pairs(pickup_p.tiles) do
     --log_actions("platform position type="..pickup_pos.dir)
     if pickup_pos.dir == "path-p" then
       --log_actions("tested pickup="..serpent.block(pickup_pos))
       next_point = PATH_FINDER:TILE_P(pickup_pos)
-      if next_point and not Robot.is_served(next_point) then
+      if next_point and not Robot.is_served(next_point, robot) then
         break
       else
         next_point = nil
@@ -167,7 +176,7 @@ function Robot.search_job(robot)
   -- SEARCHING FOR DROP
   --log_actions("searching of drop")
   for _,drop in pairs(global.land_logistic.drops) do
-    if not Robot.is_served(drop) then goto next_drop end
+    if Robot.is_served(drop, robot) then goto next_drop end
     local drop_p = PATH_FINDER:PLATFORM(drop.platform_id)
     if (not drop_p) and (not drop_p.res) then goto next_drop end
     -- SEARCHING FOR PICKUP
@@ -178,30 +187,31 @@ function Robot.search_job(robot)
       --log_actions("searching testing platform="..pickup_p.id)
       if drop_p.res == pickup_p.res then
         --log_actions("same resource="..drop_p.res)
-        next_point = Robot.free_pickup(pickup_p)
+        next_point = Robot.free_pickup(pickup_p, robot)
         
         if not next_point then
           local get_rest = function(rest_id)
             local rest_point = global.land_logistic.resting[rest_id]
             if rest_point 
-            and not Robot.is_served(rest_point) then
+            and not Robot.is_served(rest_point, robot) then
               local DP_sr = PATH_FINDER:register(robot.entity.surface, next_point, drop)
               if DP_sr.path then
                 return rest_point
               end
             end
           end
-          next_point = pickup_p.resting:for_each(get_rest)
+          next_point = Queue.restore(pickup_p.resting):for_each(get_rest)
         end
         
         if next_point then
           Robot.message.calculating(robot)
       
-          robot.next_destination = position(next_point)
-          robot.pickup_platform  = pickup_p
-          robot.drop_platform    = drop_p
-          robot.drop             = drop
-          robot.drop.served      = robot.id
+          robot.next_destination        = next_point
+          robot.pickup_platform         = pickup_p
+          robot.drop_platform           = drop_p
+          robot.drop                    = drop
+          robot.drop.served             = robot.id
+          robot.next_destination.served = robot.id
       
           if next_point.dir == "path-r" then
       	    Robot.c_pickup_rest_run:push(robot.id)
@@ -253,18 +263,18 @@ function Robot.move(robot, continue, no_path)
   
   local destination = robot.destination
   
-  if not next_tile then
-  	Robot.message.no_path(robot, Robot.message.tick == 0)
+  if not next_tile or not robot.entity.surface.get_tile(next_tile.x, next_tile.y).name:gmatch(".*" .. next_tile.dir) then
+  	Robot.message.no_path(robot, true)
   	robot.next_destination = robot.destination
   	no_path:push(robot.id)
   	return false
   end
   
-  if not Robot.is_served(next_tile) then
+  if not Robot.is_served(next_tile, robot) then
     if robot.entity.teleport(next_tile) then
   	  if next_tile then
         robot.path = path
-        robot.tile.served = -1
+        robot.tile.served = nil
         robot.tile = next_tile
         robot.tile.served = robot.id
         robot.x = robot.entity.position.x
@@ -280,12 +290,10 @@ function Robot.move(robot, continue, no_path)
         return false
       end
     else
-      game.print{"", "no teleport"}
       continue:push(robot.id)
       return false
     end
   else
-  	game.print{"", "is served"}
   	continue:push(robot.id)
     return false
   end
@@ -307,15 +315,14 @@ function Robot.check_path(CalcQueue, ResultQueue, ResultMessage)
     if robot.tile.platform and robot.next_destination.platform then
       tries = nil
     end
-    game.print{"", "hleda cestu"}
     local search_result = 
         PATH_FINDER:register(robot.entity.surface, robot.tile, robot.next_destination, tries)
     if search_result.invalid and search_result.tries then
       Robot.message.no_path(robot, Robot.message.tick == 0)
-      Robot.no_path:push(robot.id)
+      tmp_q:push(robot.id)
     elseif search_result.path then
       robot.destination = robot.next_destination
-      robot.path = search_result.path
+      robot.path = Queue.restore(search_result.path)
       robot.path:pop()
       if robot.destination.platform then
         ResultMessage(robot, robot.drop_platform.res)
@@ -336,10 +343,10 @@ function Robot.check_path(CalcQueue, ResultQueue, ResultMessage)
 end
 
 function Robot.tick(tick)
-  Robot.move_tick = (tick % 60) == 0
+  Robot.move_tick = (tick % 30) == 0
   Robot.message.tick = tick % 40
   
-  Robot.check_path(Robot.c_drop_run,        Robot.run_drop,   Robot.message.run_pickup_rest)
+  Robot.check_path(Robot.c_drop_run,        Robot.run_drop,   Robot.message.run_drop)
   Robot.check_path(Robot.c_pickup_rest_run, Robot.run_wait,   Robot.message.run_pickup_rest)
   Robot.check_path(Robot.c_pickup_run,      Robot.run_pickup, Robot.message.run_pickup)
   Robot.check_path(Robot.c_rest_run,        Robot.run_iddle,  Robot.message.iddle)
@@ -358,7 +365,7 @@ function Robot.tick(tick)
 	      Robot.c_rest_run:push(robot.id)
 	    else
 	      Robot.message.no_path(robot, true)
-          Robot.no_path:push(robot.id)
+          Robot.iddle:push(robot.id)
 	    end
       end
     elseif robot then
@@ -444,7 +451,7 @@ function Robot.tick(tick)
   while not Robot.unload:is_empty() do
     local robot = Robot.get(Robot.unload:pop())
     if robot and Robot.unloaded(robot) then
-      Robot.c_rest_run:push(robot.id)
+      Robot.iddle:push(robot.id)
     elseif robot then
       tmp_q:push(robot.id)
     end
@@ -494,7 +501,7 @@ function Robot.tick(tick)
     while not Robot.iddle_wait:is_empty() do
       local robot = Robot.get(Robot.iddle_wait:pop())
       if robot then
-        local free_pickup = Robot.free_pickup(robot.pickup_platform)
+        local free_pickup = Robot.free_pickup(robot.pickup_platform, robot)
         if free_pickup then
           Robot.message.calculating(robot)
       
@@ -519,7 +526,7 @@ function Robot.tick(tick)
     while not Robot.run_wait:is_empty() do
       local robot = Robot.get(Robot.run_wait:pop())
       if robot then
-        local free_pickup = Robot.free_pickup(robot.pickup_platform)
+        local free_pickup = Robot.free_pickup(robot.pickup_platform, robot)
         if free_pickup then
           Robot.message.calculating(robot)
       

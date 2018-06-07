@@ -105,6 +105,7 @@ function PathFinder.DIST(self, tile_x)
 end
 
 function PathFinder.TILE_P(self, position)
+  if not position then return nil end
   local x_path = self:data().tiles[position.x]
   if x_path then 
     return x_path[position.y]
@@ -126,54 +127,43 @@ function PathFinder.set_path(self, start_pos, end_pos, path)
   end
 end
 
-function PathFinder:register(surface, from, to, tries)
+function PathFinder:register(surface, from, to)
   if (not surface) or (not from) or (not to) then
     return nil
   end
 
   local result = {}
-  local w_path_id = from.x .. "_" .. from.y .. "-" .. to.x .. "_" .. to.y
+  local w_path_id = from.x .. "_" .. from.y .. ":" .. to.x .. "_" .. to.y
   local do_calculation = false
   
   local reg = self.registration[w_path_id]
-  if reg and reg.calculated then
-    result.path = reg.path
-  elseif reg then
-    result.invalid = true
-    result.tries = reg.tries
-    PathFinder.log_actions(self, "Path [" .. w_path_id .. "] is in queue")
-  else
-    do_calculation = true
-  end
-  
-  if result.path then
-    --log_actions("checking path: " .. start_pos.x .. ":" .. start_pos.y .. " " .. end_pos.x .. ":" .. end_pos.y)
-    local each = function(tile_entry)
-      local tile = surface.get_tile(tile_entry.x, tile_entry.y)
-      if not tile.name:gmatch(".*" .. tile_entry.dir) then 
-        result.path = nil
-        return true
+  if reg then
+    if reg.calculated then
+      if reg.path then
+        result.path = reg.path
+        self.registration[w_path_id] = nil
+        PathFinder.log_actions(self, "Path [" .. w_path_id .. "] found")
+      else
+      	reg.tries = true
+      	result.invalid = true
+      	self.registration[w_path_id] = nil
+      	PathFinder.log_actions(self, "Path [" .. w_path_id .. "] not found")
       end
+    else
+      result.invalid = true
     end
-    do_calculation = result.path:for_each(each)
-  end
-  
-  if do_calculation then
-    result.invalid = true
+  else
     reg = {
       calculated = false,
       surface = surface,
       from = from,
       to = to,
-      id = w_path_id,
-      tries_limit = tries
+      id = w_path_id
     }
-    self.registration[w_path_id] = reg
     self.queue:push(reg)
+    self.registration[w_path_id] = reg
     PathFinder.log_actions(self, "Path [" .. w_path_id .. "] registered")
   end
-  
-  if tries and tries == reg.tries then self.registration[w_path_id] = nil end
   return result
 end
 
@@ -393,30 +383,19 @@ function PathFinder:tick()
   -- PATH FOUND IN LAST SESSION
   if last.path_found then 
     PathFinder.COPY_PATH(self, last)
-    PathFinder.log_actions(self, "Path [" .. last.id .. "] found")
     self.last = nil
-    last.repeated = nil
     last.surface = nil
     last.queue = nil
     last.visited = nil
-    last.fqid = nil
-    last.eqid = nil
     last.path_found = nil
-    last.tries = 1 + (last.tries or 0)
     last.calculated = true
   -- QUEUE IS EMPTY
   elseif last.queue:is_empty() then
-    PathFinder.log_actions(self, "Path [" .. last.id .. "] not found")
     self.last = nil
-    last.repeated = nil
     last.queue = nil
     last.visited = nil
     last.path_found = nil
-    last.tries = 1 + (last.tries or 0)
-    if last.tries_limit 
-    and last.tries_limit < last.tries then
-      self.queue:push(last)
-    end
+    last.calculated = true
   -- STEP SESSION
   else                    
     last.path_found = PathFinder.STEP(self, 

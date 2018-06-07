@@ -91,7 +91,13 @@ local function get_tile_round(x, y)
 end
 
 local function calculate_rest_points(platform)
-  --platform.resting:push(rest_id, #path)
+  local resting = Queue.new()
+  global.land_logistic.rest_calc = Queue.restore(global.land_logistic.path_calc)
+  local ref_point = position(global.land_logistic.drops[platform.id] or global.land_logistic.pickups[platform.id] or global.land_logistic.flags[platform.id])
+  for rest_id, rest in pairs(global.land_logistic.resting) do
+  	PATH_FINDER:register(game.surfaces[1], rest, ref_point, 1)
+  	global.land_logistic.rest_calc:push({resting = position(rest), platform = ref_point})
+  end
 end
 
 local function get_tile(fx, fy)
@@ -281,6 +287,29 @@ end
 local on_tick = function(event)
   check_tables()
   check_filters()
+  
+  global.land_logistic.rest_calc = Queue.restore(global.land_logistic.path_calc)
+  local tmp_q = Queue.new()
+  while not global.land_logistic.rest_calc:is_empty() do
+    local path = global.land_logistic.rest_calc:pop()
+    if path then
+  	  local result = PATH_FINDER:register(game.surfaces[1], path.resting, path.platform, 1)
+  	  local platform_tile = PATH_FINDER:TILE_P(path.platform)
+  	  local platform
+  	  if platform_tile then platform = global.land_logistic.platforms[platform_tile.platform_id] end
+  	  if result.path and platform then
+  	    Queue.restore(platform.resting):push(Queue.restore(result.path):length())
+  	  elseif result.invalid and not result.tries then
+  	    tmp_q:push(path)
+  	  end
+  	end
+  end
+  if not tmp_q:is_empty() then
+    local push = function(entry)
+      Robot.run_wait:push(entry)
+    end 
+    tmp_q:for_each(push)
+  end
   
   PATH_FINDER:tick()
   

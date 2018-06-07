@@ -22,9 +22,11 @@ end
 
 function Queue.restore(data)
   local newQueue = Queue.new()
-  newQueue.first = data.first
-  if data.priority_order then 
-  	newQueue.priority_order = data.priority_order
+  if data then
+    newQueue.first = data.first
+    if data.priority_order then 
+      newQueue.priority_order = data.priority_order
+    end
   end
   return newQueue
 end
@@ -134,4 +136,14 @@ function Queue:for_each(fe_function)
     ptr = ptr.next
   end
   return broken
+end
+
+function Queue:length()
+  local ptr = self.first
+  local count = 0
+  while ptr do
+    count = count + 1
+    ptr = ptr.next
+  end
+  return count
 end
