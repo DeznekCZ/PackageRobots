@@ -6,5 +6,3 @@ require("prototypes.item.flag")
 require("prototypes.entity.robot")
 require("prototypes.entity.flag")
 require("prototypes.recipe.recipe")
-
-require("prototypes.recipe.void") -- OVERRIDING

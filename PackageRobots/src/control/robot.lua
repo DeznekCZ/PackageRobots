@@ -97,20 +97,9 @@ Robot = {
 }
 
 function Robot.init_queues(land_logistic)
-  Robot.register          = Queue.restore(land_logistic.robot_queues.register)
-  Robot.c_pickup_rest_run = Queue.restore(land_logistic.robot_queues.c_pickup_rest_run)
-  Robot.c_pickup_run      = Queue.restore(land_logistic.robot_queues.c_pickup_run)
-  Robot.c_rest_run        = Queue.restore(land_logistic.robot_queues.c_rest_run)
-  Robot.c_drop_run        = Queue.restore(land_logistic.robot_queues.c_drop_run)
-  Robot.run_wait          = Queue.restore(land_logistic.robot_queues.run_wait)
-  Robot.iddle_wait        = Queue.restore(land_logistic.robot_queues.iddle_wait)
-  Robot.run_pickup        = Queue.restore(land_logistic.robot_queues.run_pickup)
-  Robot.run_drop          = Queue.restore(land_logistic.robot_queues.run_drop)
-  Robot.fill              = Queue.restore(land_logistic.robot_queues.fill)
-  Robot.unload            = Queue.restore(land_logistic.robot_queues.unload)
-  Robot.iddle             = Queue.restore(land_logistic.robot_queues.iddle)
-  Robot.run_iddle         = Queue.restore(land_logistic.robot_queues.run_iddle)
-  Robot.no_path           = Queue.restore(land_logistic.robot_queues.no_path)
+  Robot.path_to_rest   = Queue.restore(land_logistic.robot_queues.path_to_rest)
+  Robot.path_to_pickup = Queue.restore(land_logistic.robot_queues.path_to_pickup)
+  Robot.path_to_drop   = Queue.restore(land_logistic.robot_queues.path_to_drop)
   
   Robot.copy_queues(land_logistic)
 end
@@ -137,8 +126,8 @@ end
 function Robot.is_served(tile_x, robot)
   if tile_x 
   and tile_x.served 
-  and Robot.robots[tile_x.served]
-  and Robot.robots[tile_x.served].id ~= robot.id then
+  and Robot.robots[tile_x.served] -- robot exists
+  and tile_x.served ~= robot.id then -- is not self
     return Robot.robots[tile_x.served]
   else
     return nil

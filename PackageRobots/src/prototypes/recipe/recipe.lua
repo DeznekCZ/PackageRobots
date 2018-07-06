@@ -57,14 +57,28 @@ data:extend(
   },
   {
     type = "recipe",
-    name = "resource-flag",
+    name = "resource-drop",
     enabled = true,
     energy_required = 1,
     ingredients =
     {
+      {"steel-chest", 1},
       {"advanced-circuit", 1}
     },
-    result = "resource-flag",
+    result = "resource-drop",
+    result_count = 1;
+  },
+  {
+    type = "recipe",
+    name = "resource-pickup",
+    enabled = true,
+    energy_required = 1,
+    ingredients =
+    {
+      {"stack-inserter", 1},
+      {"advanced-circuit", 1}
+    },
+    result = "resource-pickup",
     result_count = 1;
   }
 })  

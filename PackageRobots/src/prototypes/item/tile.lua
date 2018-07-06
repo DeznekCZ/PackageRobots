@@ -43,7 +43,7 @@ data:extend(
     stack_size = 100,
     place_as_tile =
     {
-      result = "concrete-path-d",
+      result = "concrete-path-p",
       condition_size = 1,
       condition = { "water-tile" }
     }
